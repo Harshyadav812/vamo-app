@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import type { Project, Profile, Message } from "@/lib/types";
+import type { Project, Profile, Message, ActivityEvent, Offer } from "@/lib/types";
 import { ChatPanel } from "@/modules/builder/ui/components/ChatPanel";
 import { UIPreview } from "@/modules/builder/ui/components/UIPreview";
 import { BusinessPanel } from "@/modules/builder/ui/components/BusinessPanel";
@@ -22,7 +22,8 @@ interface BuilderWorkspaceProps {
   project: Project;
   profile: Profile;
   initialMessages: Message[];
-  activityCount: number;
+  latestOffer: Offer | null;
+  activityEvents: ActivityEvent[];
   userId: string;
 }
 
@@ -30,7 +31,8 @@ export function BuilderWorkspace({
   project,
   profile,
   initialMessages,
-  activityCount,
+  latestOffer,
+  activityEvents,
   userId,
 }: BuilderWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<"project" | "business">("project");
@@ -141,7 +143,9 @@ export function BuilderWorkspace({
         <BusinessPanel
           project={currentProject}
           userId={userId}
-          activityCount={activityCount}
+          messages={messages}
+          latestOffer={latestOffer}
+          activityEvents={activityEvents}
           onProjectUpdate={handleProjectUpdate}
           onPineappleEarned={handlePineappleEarned}
         />
@@ -199,7 +203,9 @@ export function BuilderWorkspace({
               <BusinessPanel
                 project={currentProject}
                 userId={userId}
-                activityCount={activityCount}
+                messages={messages}
+                latestOffer={latestOffer}
+                activityEvents={activityEvents}
                 onProjectUpdate={handleProjectUpdate}
                 onPineappleEarned={handlePineappleEarned}
               />
@@ -219,7 +225,6 @@ export function BuilderWorkspace({
           onOpenChange={setShowOfferDialog}
           project={currentProject}
           userId={userId}
-          activityCount={activityCount}
         />
       </div>
     );
@@ -270,7 +275,6 @@ export function BuilderWorkspace({
           onOpenChange={setShowOfferDialog}
           project={currentProject}
           userId={userId}
-          activityCount={activityCount}
         />
       </div>
     );
@@ -323,7 +327,6 @@ export function BuilderWorkspace({
         onOpenChange={setShowOfferDialog}
         project={currentProject}
         userId={userId}
-        activityCount={activityCount}
       />
     </div>
   );

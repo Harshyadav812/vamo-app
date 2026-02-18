@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Project, Profile, Message } from "@/lib/types";
+import type { Project, Profile, Message, ActivityEvent, Offer } from "@/lib/types";
 import { BuilderWorkspace } from "@/modules/builder/ui/views/builder-workspace";
 
 export const dynamic = "force-dynamic";
@@ -45,18 +45,31 @@ export default async function BuilderPage({ params }: BuilderPageProps) {
     .eq("project_id", projectId)
     .order("created_at", { ascending: true });
 
-  // Fetch activity events count
-  const { count: activityCount } = await supabase
+  // Fetch latest offer (valuation)
+  const { data: latestOffer } = await supabase
+    .from("offers")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("expired", false)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // Fetch activity events for timeline
+  const { data: activityEvents } = await supabase
     .from("activity_events")
-    .select("*", { count: "exact", head: true })
-    .eq("project_id", projectId);
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   return (
     <BuilderWorkspace
       project={project as Project}
       profile={profile as Profile}
       initialMessages={(messages as Message[]) ?? []}
-      activityCount={activityCount ?? 0}
+      latestOffer={(latestOffer as Offer) ?? null}
+      activityEvents={(activityEvents as ActivityEvent[]) ?? []}
       userId={user.id}
     />
   );

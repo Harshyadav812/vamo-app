@@ -18,6 +18,8 @@ export interface Project {
   url: string | null;
   screenshot_url: string | null;
   why_built: string | null;
+  github_url: string | null;
+  linkedin_url: string | null;
   progress_score: number;
   listed: boolean;
   created_at: string;
