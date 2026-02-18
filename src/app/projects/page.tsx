@@ -36,7 +36,7 @@ export default async function ProjectsPage() {
         </Link>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 text-sm font-medium">
-            {profile?.pineapple_balance ?? 0} 🍍
+            {profile?.pineapple_balance ?? 0} <span className="text-lg leading-none">🍍</span>
           </div>
           <Link href="/wallet">
             <Button variant="ghost" size="sm">
@@ -68,7 +68,7 @@ export default async function ProjectsPage() {
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <p className="text-lg font-medium">No projects yet</p>
               <p className="mb-4 text-sm text-muted-foreground">
-                Create your first project to start building and earning 🍍
+                Create your first project to start building and earning <span className="text-lg leading-none">🍍</span>
               </p>
               <Link href="/projects/new">
                 <Button>Create Your First Project</Button>

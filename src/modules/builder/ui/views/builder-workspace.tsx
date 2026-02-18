@@ -17,6 +17,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ListForSaleDialog } from "@/modules/builder/ui/components/ListForSaleDialog";
 import { OfferDialog } from "@/modules/builder/ui/components/OfferDialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { MessageSquare } from "lucide-react";
 
 interface BuilderWorkspaceProps {
   project: Project;
@@ -72,7 +73,7 @@ export function BuilderWorkspace({
         &gt;&gt;&gt; vamo
       </Link>
       <div className="flex items-center gap-1 rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1 text-sm font-semibold text-orange-700">
-        {pineappleBalance} 🍍
+        {pineappleBalance} <span className="text-lg leading-none">🍍</span>
       </div>
     </div>
   );
@@ -243,7 +244,7 @@ export function BuilderWorkspace({
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm">
-                  💬 Chat
+                  <MessageSquare className="h-4 w-4 mr-2" /> Chat
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[380px] p-0">

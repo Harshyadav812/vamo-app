@@ -1,36 +1,51 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import {
+  MessageSquare,
+  BarChart3,
+  ArrowRightLeft,
+  Store,
+  Zap,
+  Lightbulb,
+  Wrench,
+  TrendingUp,
+  DollarSign,
+  Hammer,
+  Utensils,
+  Star,
+  Home,
+} from "lucide-react";
 
 // ── Feature cards data ────────────────────────────────────────────────────────
 
 const FEATURES = [
   {
-    icon: "💬",
+    icon: MessageSquare,
     title: "AI-Powered Chat",
     desc: "Describe what you want in plain English. Vamo's Gemini AI builds, iterates, and refines — no code needed.",
   },
   {
-    icon: "📊",
+    icon: BarChart3,
     title: "Business Panel",
     desc: "Track valuation, traction signals, and your startup story. Everything investors want, in one place.",
   },
   {
-    icon: "🔄",
+    icon: ArrowRightLeft,
     title: "Toggle, Don't Switch",
     desc: "Flip between your live UI preview and business analytics in one click. No more juggling tabs.",
   },
   {
-    icon: "🍍",
+    icon: () => <span className="text-2xl">🍍</span>,
     title: "Progress = Pineapples",
     desc: "Ship real updates and earn pineapples — an in-app currency redeemable for Uber Eats credits.",
   },
   {
-    icon: "🏪",
+    icon: Store,
     title: "List or Sell",
     desc: "List your project on the marketplace. Get instant AI-powered offers from buyers who see your traction data.",
   },
   {
-    icon: "⚡",
+    icon: Zap,
     title: "Built for Founders",
     desc: "No code knowledge required. Describe what you want, and Vamo builds it. Focus on the business, not the tech.",
   },
@@ -41,25 +56,25 @@ const FEATURES = [
 const STEPS = [
   {
     num: "01",
-    icon: "💡",
+    icon: Lightbulb,
     title: "Describe your idea",
     desc: "Tell Vamo what you're building in plain English. No wireframes, no code — just your vision.",
   },
   {
     num: "02",
-    icon: "🔧",
+    icon: Wrench,
     title: "Iterate on UI + Business",
     desc: "Toggle between your live UI preview and your business panel. Update both as you go.",
   },
   {
     num: "03",
-    icon: "📈",
+    icon: TrendingUp,
     title: "Track real progress",
     desc: "Every meaningful update earns pineapples. Your valuation and traction signals update in real-time.",
   },
   {
     num: "04",
-    icon: "💰",
+    icon: DollarSign,
     title: "Redeem or sell",
     desc: "Cash in pineapples for Uber Eats credits. Or list your project on the marketplace and get offers.",
   },
@@ -83,7 +98,7 @@ export default function HomePage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl">🍍</span>
+              <span className="text-2xl leading-none">🍍</span>
               <span className="text-lg font-bold tracking-tight">Vamo</span>
             </Link>
             <div className="hidden items-center gap-6 text-sm text-gray-400 md:flex">
@@ -118,7 +133,7 @@ export default function HomePage() {
         <div className="relative mx-auto max-w-4xl text-center">
           {/* Badge */}
           <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-teal-500/20 bg-teal-500/5 px-4 py-1.5 text-sm text-teal-300">
-            <span>🍍</span>
+            <span className="text-lg leading-none">🍍</span>
             <span>Earn pineapples for real progress</span>
           </div>
 
@@ -176,7 +191,9 @@ export default function HomePage() {
             <div className="p-6">
               {/* Fake project header */}
               <div className="flex items-center gap-3 mb-5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-400 to-emerald-500 text-sm font-bold">🏠</div>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-400 to-emerald-500 text-white shadow-lg">
+                  <Home className="h-5 w-5" />
+                </div>
                 <div>
                   <div className="h-3 w-32 rounded-full bg-white/15" />
                   <div className="mt-1.5 h-2 w-20 rounded-full bg-white/8" />
@@ -207,7 +224,7 @@ export default function HomePage() {
 
             {/* Floating pineapple notification */}
             <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full border border-white/10 bg-[#1a1a1a] px-4 py-2 shadow-xl">
-              <span className="text-base">🍍</span>
+              <span className="text-xl leading-none">🍍</span>
               <span className="text-sm font-medium text-teal-300">+5 pineapples earned!</span>
             </div>
           </div>
@@ -233,8 +250,8 @@ export default function HomePage() {
                 key={f.title}
                 className="group rounded-2xl border border-white/5 bg-white/[0.02] p-6 transition-all hover:border-white/10 hover:bg-white/[0.04]"
               >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 text-xl transition-transform group-hover:scale-110">
-                  {f.icon}
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 text-teal-400 transition-transform group-hover:scale-110">
+                  <f.icon className="h-6 w-6" />
                 </div>
                 <h3 className="text-base font-semibold">{f.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-gray-500">{f.desc}</p>
@@ -266,8 +283,8 @@ export default function HomePage() {
               <div key={s.num} className="relative text-center">
                 {/* Icon circle */}
                 <div className="relative mx-auto mb-5">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-2xl">
-                    {s.icon}
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-teal-400">
+                    <s.icon className="h-7 w-7" />
                   </div>
                   {/* Step number badge */}
                   <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-teal-500 text-[10px] font-bold text-white shadow-lg shadow-teal-500/30">
@@ -293,7 +310,7 @@ export default function HomePage() {
             <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
               Real progress.
               <br />
-              Real pineapples. 🍍
+              Real pineapples. <span className="text-3xl leading-none">🍍</span>
             </h2>
             <p className="mt-4 max-w-md text-gray-400 leading-relaxed">
               Every time you ship something meaningful — a new feature, a business
@@ -302,7 +319,9 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex items-center gap-6 text-sm">
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-base">🏗️</div>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-emerald-400">
+                  <Hammer className="h-5 w-5" />
+                </div>
                 <div>
                   <p className="font-semibold text-teal-300">Earn</p>
                   <p className="text-xs text-gray-500">Ship &amp; progress</p>
@@ -310,7 +329,9 @@ export default function HomePage() {
               </div>
               <span className="text-gray-600">→</span>
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-base">🍔</div>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-emerald-400">
+                  <Utensils className="h-5 w-5" />
+                </div>
                 <div>
                   <p className="font-semibold text-teal-300">Redeem</p>
                   <p className="text-xs text-gray-500">Uber Eats credits</p>
@@ -324,13 +345,13 @@ export default function HomePage() {
             {/* Ledger header */}
             <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🍍</span>
+                <span className="text-lg leading-none">🍍</span>
                 <span className="text-sm font-semibold">Pineapple Ledger</span>
               </div>
               <div className="flex items-center gap-1 text-sm text-gray-400">
-                <span>⭐</span>
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500/20" />
                 <span className="font-semibold text-white">42</span>
-                <span>🍍</span>
+                <span className="text-sm">🍍</span>
               </div>
             </div>
 
@@ -339,14 +360,16 @@ export default function HomePage() {
               {LEDGER_ITEMS.map((item) => (
                 <div key={item.action} className="flex items-center justify-between px-6 py-3.5">
                   <span className="text-sm text-gray-300">{item.action}</span>
-                  <span className="text-sm font-semibold text-teal-400">+{item.reward} 🍍</span>
+                  <span className="text-sm font-semibold text-teal-400 flex items-center gap-1">
+                    +{item.reward} <span className="text-xs">🍍</span>
+                  </span>
                 </div>
               ))}
             </div>
 
             {/* Footer */}
             <div className="border-t border-white/5 px-6 py-3 text-center text-xs text-gray-500">
-              50 🍍 = $10 Uber Eats credit · Redeemable anytime
+              50 <span className="text-sm">🍍</span> = $10 Uber Eats credit · Redeemable anytime
             </div>
           </div>
         </div>
@@ -384,7 +407,7 @@ export default function HomePage() {
       <footer className="border-t border-white/5 px-6 py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>🍍</span>
+            <span className="text-lg leading-none grayscale opacity-80">🍍</span>
             <span>© {new Date().getFullYear()} Vamo. Built for founders.</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-gray-500">

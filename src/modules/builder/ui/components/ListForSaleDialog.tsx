@@ -42,10 +42,10 @@ export function ListForSaleDialog({
     try {
       const { error } = await supabase.from("listings").insert({
         project_id: project.id,
-        seller_id: userId,
+        owner_id: userId,
+        title: project.name,
+        description: notes || "No description provided",
         asking_price: parseInt(askingPrice, 10) * 100, // store in cents
-        currency,
-        notes: notes || null,
       });
 
       if (error) throw error;
@@ -60,8 +60,11 @@ export function ListForSaleDialog({
         description: "Your project is now visible on the marketplace.",
       });
       onOpenChange(false);
+      onOpenChange(false);
     } catch (err) {
-      toast.error("Failed to list project");
+      console.error("List for sale error:", err);
+      const msg = err instanceof Error ? err.message : "Failed to list project";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

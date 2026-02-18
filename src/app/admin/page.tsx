@@ -127,8 +127,8 @@ export default async function AdminPage() {
                       <TableCell className="font-mono text-xs">
                         {r.user_id.substring(0, 8)}...
                       </TableCell>
-                      <TableCell className="font-medium">
-                        {r.amount} 🍍
+                      <TableCell className="font-medium flex items-center gap-1">
+                        {r.amount} <span className="text-sm">🍍</span>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{r.status}</Badge>
@@ -155,7 +155,7 @@ export default async function AdminPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>🍍 Balance</TableHead>
+                  <TableHead className="flex items-center gap-1"><span className="text-lg leading-none">🍍</span> Balance</TableHead>
                   <TableHead>Joined</TableHead>
                 </TableRow>
               </TableHeader>
@@ -165,7 +165,7 @@ export default async function AdminPage() {
                     <TableCell>{u.display_name}</TableCell>
                     <TableCell className="text-muted-foreground">{u.email}</TableCell>
                     <TableCell className="font-medium">
-                      {u.pineapple_balance} 🍍
+                      {u.pineapple_balance} <span className="text-sm">🍍</span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(u.created_at).toLocaleDateString()}

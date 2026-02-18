@@ -18,15 +18,17 @@ export default async function MarketplacePage() {
     .from("listings")
     .select(`
       id,
+      title,
+      description,
       asking_price,
-      currency,
-      notes,
       status,
       created_at,
       project_id
     `)
     .eq("status", "active")
     .order("created_at", { ascending: false });
+
+  console.log("Marketplace listings fetch:", listings?.length, listings);
 
   // Fetch project details for each listing
   const projectIds = listings?.map((l) => l.project_id) ?? [];
@@ -113,11 +115,6 @@ export default async function MarketplacePage() {
                         {new Date(listing.created_at).toLocaleDateString()}
                       </span>
                     </div>
-                    {listing.notes && (
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                        {listing.notes}
-                      </p>
-                    )}
                     {user && (
                       <Button
                         size="sm"

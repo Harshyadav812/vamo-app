@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         {
           error: {
             code: "INSUFFICIENT_BALANCE",
-            message: `You need ${amount} 🍍 but have ${profile?.pineapple_balance ?? 0}`,
+            message: `You need ${amount} pineapples but have ${profile?.pineapple_balance ?? 0}`,
           },
         },
         { status: 400 }

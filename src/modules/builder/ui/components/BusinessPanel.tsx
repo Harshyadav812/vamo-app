@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, type ReactNode } from "react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Project, Message, ActivityEvent, Offer } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -30,19 +30,18 @@ import {
   Check,
   ExternalLink,
   Plus,
-  Cherry,
 } from "lucide-react";
 
 // ── Progress score weights ──────────────────────────────────────────────────
 const SCORE_WEIGHTS: Record<string, number> = {
-  description: 15,
-  url: 20,
-  why_built: 15,
-  screenshot_url: 10,
+  description: 10,
+  url: 10,
+  why_built: 10,
+  screenshot_url: 5,
 };
 
 function calculateProgressScore(project: Project): number {
-  let score = 10;
+  let score = 0;
   if (project.description) score += SCORE_WEIGHTS.description;
   if (project.url) score += SCORE_WEIGHTS.url;
   if (project.why_built) score += SCORE_WEIGHTS.why_built;
@@ -144,6 +143,23 @@ export function BusinessPanel({
   );
 
   const progressScore = calculateProgressScore(project);
+
+  // Sync progress score with DB if there's a mismatch
+  useEffect(() => {
+    if (progressScore !== project.progress_score) {
+      const syncScore = async () => {
+        const { error } = await supabase
+          .from("projects")
+          .update({ progress_score: progressScore })
+          .eq("id", project.id);
+        
+        if (!error) {
+          onProjectUpdate({ progress_score: progressScore });
+        }
+      };
+      syncScore();
+    }
+  }, [progressScore, project.progress_score, project.id, onProjectUpdate, supabase]);
 
   async function saveField(field: string, value: string, eventType: string) {
     setSaving(true);
@@ -319,7 +335,7 @@ export function BusinessPanel({
                   onClick={() => setEditingDescription(true)}
                   className="mt-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
                 >
-                  <Plus className="inline h-3.5 w-3.5 mr-1" />Add description <span className="text-emerald-600 inline-flex items-center gap-0.5 ml-1">(+5<Cherry className="inline h-3 w-3" />)</span>
+                  <Plus className="inline h-3.5 w-3.5 mr-1" />Add description <span className="text-emerald-600 inline-flex items-center gap-0.5 ml-1">(+5 🍍)</span>
                 </button>
               )}
             </div>
@@ -366,7 +382,7 @@ export function BusinessPanel({
                       onClick={handleRunValuation}
                       disabled={runningValuation}
                     >
-                      {runningValuation ? "Analyzing..." : <><span>Run Valuation Analysis</span><Cherry className="ml-1.5 inline h-3.5 w-3.5" /></>}
+                      {runningValuation ? "Analyzing..." : <><span>Run Valuation Analysis</span><span className="ml-1.5 text-lg leading-none">🍍</span></>}
                     </Button>
                   ) : (
                     <p className="text-xs text-muted-foreground">
@@ -537,7 +553,7 @@ export function BusinessPanel({
             <div className="rounded-xl border-2 border-dashed p-8 text-center text-sm text-muted-foreground">
               <Users className="h-6 w-6 text-gray-400 mx-auto mb-2" />
               <p className="font-medium">Collaborator management coming soon</p>
-              <p className="mt-1 text-emerald-600 text-xs inline-flex items-center gap-0.5">(+10<Cherry className="h-3 w-3" /> per collaborator)</p>
+              <p className="mt-1 text-emerald-600 text-xs inline-flex items-center gap-0.5">(+10 🍍 per collaborator)</p>
             </div>
           </div>
         )}

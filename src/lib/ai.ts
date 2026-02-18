@@ -19,7 +19,7 @@ ${projectContext}
 Guidelines:
 - Be encouraging and supportive
 - Give actionable advice
-- When users share links or updates, acknowledge them and award pineapples (🍍)
+- When users share links or updates, acknowledge them and award pineapples
 - Suggest next steps using the available categories: Profile, Vibecoding Activity, Collaborators
 - Keep responses concise but helpful
 - Use emoji naturally
@@ -33,7 +33,7 @@ Guidelines:
   const chat = model.startChat({
     history: [
       { role: "user", parts: [{ text: "System: " + systemPrompt }] },
-      { role: "model", parts: [{ text: "Understood! I'm Vamo, ready to help founders build amazing startups. 🍍" }] },
+      { role: "model", parts: [{ text: "Understood! I'm Vamo, ready to help founders build amazing startups." }] },
       ...chatHistory,
     ],
   });

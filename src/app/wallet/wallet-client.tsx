@@ -43,7 +43,7 @@ export function WalletClient({
   async function handleRedeem() {
     const amount = parseInt(redeemAmount, 10);
     if (!amount || amount < 50) {
-      toast.error("Minimum redemption is 50 🍍");
+      toast.error("Minimum redemption is 50 pineapples");
       return;
     }
     if (amount > currentBalance) {
@@ -67,8 +67,9 @@ export function WalletClient({
       const data = await res.json();
       setCurrentBalance(data.newBalance);
       setRedeemAmount("");
-      toast.success(`Redeemed ${amount} 🍍`, {
+      toast.success(`Redeemed ${amount} pineapples`, {
         description: "Your redemption is being processed.",
+        icon: "🍍",
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Redemption failed";
@@ -98,7 +99,7 @@ export function WalletClient({
         </Link>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 text-sm font-medium">
-            {currentBalance} 🍍
+            {currentBalance} <span className="text-lg leading-none">🍍</span>
           </div>
           <span className="text-sm text-muted-foreground">{displayName}</span>
         </div>
@@ -116,7 +117,9 @@ export function WalletClient({
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-4xl font-bold">{currentBalance} 🍍</p>
+                <p className="flex items-center gap-2 text-4xl font-bold">
+                  {currentBalance} <span className="text-4xl leading-none">🍍</span>
+                </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Total pineapples earned
                 </p>
@@ -163,7 +166,7 @@ export function WalletClient({
                     {rewards.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                          No rewards yet. Start building to earn 🍍!
+                          No rewards yet. Start building to earn <span className="text-lg leading-none">🍍</span>!
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -172,8 +175,8 @@ export function WalletClient({
                           <TableCell>
                             {EVENT_LABELS[reward.event_type] ?? reward.event_type}
                           </TableCell>
-                          <TableCell className="font-medium text-green-600">
-                            +{reward.amount} 🍍
+                          <TableCell className="font-medium text-green-600 flex items-center gap-1">
+                            +{reward.amount} <span className="text-sm">🍍</span>
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {new Date(reward.created_at).toLocaleDateString()}
@@ -208,8 +211,8 @@ export function WalletClient({
                     ) : (
                       redemptions.map((r) => (
                         <TableRow key={r.id}>
-                          <TableCell className="font-medium">
-                            {r.amount} 🍍
+                          <TableCell className="font-medium flex items-center gap-1">
+                            {r.amount} <span className="text-sm">🍍</span>
                           </TableCell>
                           <TableCell>
                             <Badge

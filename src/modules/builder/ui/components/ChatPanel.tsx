@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { formatDistanceToNowStrict, differenceInHours, format } from "date-fns";
+import { Sparkles, Bug, Wrench, Trophy, User, Zap, Users, Cherry } from "lucide-react";
 
 interface ChatPanelProps {
   project: Project;
@@ -18,11 +19,11 @@ interface ChatPanelProps {
 
 // ── Tag config ────────────────────────────────────────────────────────────────
 
-const TAG_OPTIONS: { value: MessageTag; label: string; emoji: string }[] = [
-  { value: "feature", label: "Feature", emoji: "✨" },
-  { value: "bug", label: "Bug", emoji: "🐛" },
-  { value: "improvement", label: "Improve", emoji: "🔧" },
-  { value: "milestone", label: "Milestone", emoji: "🏆" },
+const TAG_OPTIONS: { value: MessageTag; label: string; icon: React.ElementType }[] = [
+  { value: "feature", label: "Feature", icon: Sparkles },
+  { value: "bug", label: "Bug", icon: Bug },
+  { value: "improvement", label: "Improve", icon: Wrench },
+  { value: "milestone", label: "Milestone", icon: Trophy },
 ];
 
 const TAG_STYLES: Record<
@@ -54,9 +55,9 @@ const TAG_STYLES: Record<
 // ── Suggestion chips shown at the top when no messages yet ────────────────────
 
 const SUGGESTION_CHIPS = [
-  { label: "Add my Profile", reward: 100, emoji: "👤" },
-  { label: "Log Vibecoding Activity", reward: 100, emoji: "⚡" },
-  { label: "Add Collaborators", reward: 100, emoji: "👥" },
+  { label: "Add my Profile", reward: 100, icon: User },
+  { label: "Log Vibecoding Activity", reward: 100, icon: Zap },
+  { label: "Add Collaborators", reward: 100, icon: Users },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -144,7 +145,7 @@ function AssistantMessage({ msg }: { msg: Message }) {
             variant="secondary"
             className="mt-1.5 gap-0.5 px-1.5 text-[10px] font-semibold"
           >
-            <span>🍍</span>
+            <span className="text-sm">🍍</span>
             <span>+{msg.pineapples_earned}</span>
           </Badge>
         )}
@@ -226,8 +227,9 @@ export function ChatPanel({
 
       if (data.pineapplesEarned && data.pineapplesEarned > 0) {
         onPineappleEarned(data.pineapplesEarned);
-        toast.success(`+${data.pineapplesEarned} 🍍`, {
+        toast.success(`+${data.pineapplesEarned} pineapples`, {
           description: "Pineapples earned for your activity!",
+          icon: "🍍",
         });
       }
     } catch (err) {
@@ -264,12 +266,12 @@ export function ChatPanel({
       {/* Suggestion chips when no messages */}
       {messages.length === 0 && (
         <div className="space-y-3 p-4">
-          <p className="text-[13px] leading-relaxed text-gray-600">
+          <p className="text-[13px] leading-relaxed text-gray-600 flex flex-wrap items-center gap-1">
             Welcome! Go to{" "}
             <span className="font-medium text-black underline">
               Business Analysis
             </span>{" "}
-            to earn pineapples, or start chatting below. 🍍
+            to earn pineapples, or start chatting below. <span className="text-lg leading-none">🍍</span>
           </p>
           <div className="flex flex-wrap gap-2">
             {SUGGESTION_CHIPS.map((chip) => (
@@ -278,10 +280,10 @@ export function ChatPanel({
                 onClick={() => handleSuggestionClick(chip.label)}
                 className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-all hover:border-gray-300 hover:shadow-sm"
               >
-                <span>{chip.emoji}</span>
+                <chip.icon className="h-3.5 w-3.5 text-gray-500" />
                 <span>{chip.label}</span>
-                <span className="text-emerald-600">
-                  +{chip.reward}🍍
+                <span className="text-emerald-600 flex items-center gap-0.5">
+                  +{chip.reward}<span className="text-xs">🍍</span>
                 </span>
               </button>
             ))}
@@ -325,13 +327,13 @@ export function ChatPanel({
                   prev === opt.value ? null : opt.value
                 )
               }
-              className={`rounded-full px-2.5 py-1 text-[10px] font-medium transition-all ${
+              className={`rounded-full px-2.5 py-1 text-[10px] font-medium transition-all flex items-center gap-1.5 ${
                 selectedTag === opt.value
                   ? TAG_STYLES[opt.value].className + " ring-1 ring-offset-1"
                   : "bg-gray-100 text-gray-500 hover:bg-gray-200"
               }`}
             >
-              {opt.emoji} {opt.label}
+              <opt.icon className="h-3 w-3" /> {opt.label}
             </button>
           ))}
         </div>
