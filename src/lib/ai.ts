@@ -8,7 +8,7 @@ export async function getChatResponse(
   userMessage: string,
   conversationHistory: Array<{ role: "user" | "model"; content: string }>
 ): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const systemPrompt = `You are Vamo, a friendly AI assistant for startup founders building their projects. 
 You help founders iterate on their startup UI and business progress.
@@ -55,7 +55,7 @@ export async function getValuationOffer(
   reasoning: string;
   signals: Record<string, unknown>;
 }> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `You are a startup valuation analyst. Based on the following project information, provide a valuation estimate.
 

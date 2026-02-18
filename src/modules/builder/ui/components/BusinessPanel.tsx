@@ -1,13 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Project } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+
+// ── Progress score weights ──────────────────────────────────────────────────
+const SCORE_WEIGHTS: Record<string, number> = {
+  description: 15,
+  url: 20,
+  why_built: 15,
+  screenshot_url: 10,
+};
+
+function calculateProgressScore(project: Project): number {
+  let score = 0;
+  if (project.description) score += SCORE_WEIGHTS.description;
+  if (project.url) score += SCORE_WEIGHTS.url;
+  if (project.why_built) score += SCORE_WEIGHTS.why_built;
+  if (project.screenshot_url) score += SCORE_WEIGHTS.screenshot_url;
+  // Base score for having a project
+  score += 10;
+  return Math.min(score, 100);
+}
 
 interface BusinessPanelProps {
   project: Project;
@@ -61,6 +81,17 @@ export function BusinessPanel({
       if (error) throw error;
 
       onProjectUpdate({ [field]: value } as Partial<Project>);
+
+      // Recalculate and persist progress score
+      const updatedProject = { ...project, [field]: value };
+      const newScore = calculateProgressScore(updatedProject);
+      if (newScore !== project.progress_score) {
+        await supabase
+          .from("projects")
+          .update({ progress_score: newScore })
+          .eq("id", project.id);
+        onProjectUpdate({ progress_score: newScore });
+      }
 
       // Log activity and earn reward
       await supabase.from("activity_events").insert({
@@ -125,9 +156,17 @@ export function BusinessPanel({
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full bg-white">
       {/* Sidebar */}
       <div className="w-48 shrink-0 border-r bg-gray-50 p-3">
+        {/* Progress Score */}
+        <div className="mb-4 space-y-1.5 px-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Progress</span>
+            <span className="text-xs font-bold text-emerald-600">{calculateProgressScore(project)}%</span>
+          </div>
+          <Progress value={calculateProgressScore(project)} className="h-1.5" />
+        </div>
         <div className="space-y-1">
           {SIDEBAR_ITEMS.map((item) => (
             <button

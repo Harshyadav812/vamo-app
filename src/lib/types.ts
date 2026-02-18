@@ -16,6 +16,7 @@ export interface Project {
   name: string;
   description: string | null;
   url: string | null;
+  screenshot_url: string | null;
   why_built: string | null;
   progress_score: number;
   listed: boolean;

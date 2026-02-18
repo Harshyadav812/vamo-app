@@ -4,8 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import type { Project, Message, MessageTag } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { formatDistanceToNowStrict, differenceInHours, format } from "date-fns";
 
 interface ChatPanelProps {
   project: Project;
@@ -15,12 +16,144 @@ interface ChatPanelProps {
   onPineappleEarned: (amount: number) => void;
 }
 
-// Suggestion chips shown at bottom
-const SUGGESTION_CHIPS = [
-  { label: "Profile", reward: 100 },
-  { label: "Vibecoding Activity", reward: 100 },
-  { label: "Collaborators", reward: 100 },
+// ── Tag config ────────────────────────────────────────────────────────────────
+
+const TAG_OPTIONS: { value: MessageTag; label: string; emoji: string }[] = [
+  { value: "feature", label: "Feature", emoji: "✨" },
+  { value: "bug", label: "Bug", emoji: "🐛" },
+  { value: "improvement", label: "Improve", emoji: "🔧" },
+  { value: "milestone", label: "Milestone", emoji: "🏆" },
 ];
+
+const TAG_STYLES: Record<
+  MessageTag,
+  { label: string; className: string }
+> = {
+  feature: {
+    label: "Feature",
+    className: "bg-violet-100 text-violet-800",
+  },
+  bug: {
+    label: "Bug",
+    className: "bg-red-100 text-red-800",
+  },
+  improvement: {
+    label: "Improvement",
+    className: "bg-blue-100 text-blue-800",
+  },
+  milestone: {
+    label: "Milestone",
+    className: "bg-amber-100 text-amber-800",
+  },
+  general: {
+    label: "General",
+    className: "bg-gray-100 text-gray-700",
+  },
+};
+
+// ── Suggestion chips shown at the top when no messages yet ────────────────────
+
+const SUGGESTION_CHIPS = [
+  { label: "Add my Profile", reward: 100, emoji: "👤" },
+  { label: "Log Vibecoding Activity", reward: 100, emoji: "⚡" },
+  { label: "Add Collaborators", reward: 100, emoji: "👥" },
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const hoursAgo = differenceInHours(new Date(), date);
+  if (hoursAgo < 24) {
+    return formatDistanceToNowStrict(date, { addSuffix: true });
+  }
+  return format(date, "MMM dd 'at' HH:mm");
+}
+
+// ── Typing Indicator ──────────────────────────────────────────────────────────
+
+function TypingIndicator() {
+  return (
+    <div className="flex items-start gap-2.5 px-2 pb-4">
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-emerald-500 text-[11px] font-bold text-white">
+        V
+      </div>
+      <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3">
+        <div className="flex items-center gap-1">
+          <span className="inline-block size-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]" />
+          <span className="inline-block size-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]" />
+          <span className="inline-block size-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── User Message ──────────────────────────────────────────────────────────────
+
+function UserMessage({ msg }: { msg: Message }) {
+  const tag = msg.tag && msg.tag !== "general" ? msg.tag : null;
+
+  return (
+    <div className="group flex flex-col items-end gap-1 pb-3 pl-10 pr-2">
+      <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#2a2a2a] px-4 py-2.5 text-[13px] leading-relaxed text-white">
+        {msg.content}
+      </div>
+      <div className="flex items-center gap-1.5">
+        {tag && (
+          <Badge
+            variant="outline"
+            className={`h-5 border-0 px-1.5 text-[10px] font-medium ${TAG_STYLES[tag].className}`}
+          >
+            {TAG_STYLES[tag].label}
+          </Badge>
+        )}
+        <span className="text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+          {formatRelativeTime(msg.created_at)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Assistant Message ─────────────────────────────────────────────────────────
+
+function AssistantMessage({ msg }: { msg: Message }) {
+  return (
+    <div className="group flex flex-col gap-1 pb-3 pr-10">
+      {/* Avatar + name row */}
+      <div className="flex items-center gap-2 pl-2">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-emerald-500 text-[11px] font-bold text-white">
+          V
+        </div>
+        <span className="text-xs font-semibold text-gray-800">Vamo</span>
+        <span className="text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+          {formatRelativeTime(msg.created_at)}
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="pl-[38px]">
+        <div className="whitespace-pre-wrap text-[13px] leading-relaxed text-gray-900">
+          {msg.content}
+        </div>
+
+        {/* Pineapple reward badge */}
+        {msg.pineapples_earned > 0 && (
+          <Badge
+            variant="secondary"
+            className="mt-1.5 gap-0.5 px-1.5 text-[10px] font-semibold"
+          >
+            <span>🍍</span>
+            <span>+{msg.pineapples_earned}</span>
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main ChatPanel ────────────────────────────────────────────────────────────
 
 export function ChatPanel({
   project,
@@ -31,15 +164,14 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedTag, setSelectedTag] = useState<MessageTag | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive (vibe pattern)
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length, sending]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -53,7 +185,9 @@ export function ChatPanel({
     if (!input.trim() || sending) return;
 
     const userMessage = input.trim();
+    const tag = selectedTag ?? "general";
     setInput("");
+    setSelectedTag(null);
     setSending(true);
 
     // Optimistic: add user message
@@ -62,7 +196,7 @@ export function ChatPanel({
       project_id: project.id,
       role: "user",
       content: userMessage,
-      tag: "general",
+      tag,
       pineapples_earned: 0,
       created_at: new Date().toISOString(),
     };
@@ -75,7 +209,7 @@ export function ChatPanel({
         body: JSON.stringify({
           projectId: project.id,
           message: userMessage,
-          tag: "general",
+          tag,
         }),
       });
 
@@ -97,7 +231,8 @@ export function ChatPanel({
         });
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Something went wrong";
+      const errorMessage =
+        err instanceof Error ? err.message : "Something went wrong";
       toast.error("Failed to send message", { description: errorMessage });
     } finally {
       setSending(false);
@@ -111,121 +246,104 @@ export function ChatPanel({
     }
   }
 
-  function handleSuggestionClick(suggestion: string) {
-    setInput(`I want to add my ${suggestion.toLowerCase()}`);
+  function handleSuggestionClick(label: string) {
+    setInput(`I want to ${label.toLowerCase()}`);
     textareaRef.current?.focus();
   }
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      {/* Project source badge - top right */}
-      <div className="flex items-center justify-end border-b px-4 py-2.5">
-        <span className="rounded-md border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600">
+    <div className="flex flex-col flex-1 min-h-0 bg-white">
+      {/* Project name badge */}
+      <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
+        <span className="text-xs font-medium text-muted-foreground">Chat</span>
+        <span className="max-w-[180px] truncate rounded-md border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600">
           {project.name}
         </span>
       </div>
 
-      {/* Intro message when no messages */}
+      {/* Suggestion chips when no messages */}
       {messages.length === 0 && (
-        <div className="px-4 py-4 text-[13px] leading-relaxed text-gray-600">
-          Go to{" "}
-          <span className="font-medium text-black underline cursor-pointer">
-            Business Analysis
-          </span>{" "}
-          to earn pineapples. You can add any of the fields to redeem
-          pineapples 🍍
+        <div className="space-y-3 p-4">
+          <p className="text-[13px] leading-relaxed text-gray-600">
+            Welcome! Go to{" "}
+            <span className="font-medium text-black underline">
+              Business Analysis
+            </span>{" "}
+            to earn pineapples, or start chatting below. 🍍
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {SUGGESTION_CHIPS.map((chip) => (
+              <button
+                key={chip.label}
+                onClick={() => handleSuggestionClick(chip.label)}
+                className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-all hover:border-gray-300 hover:shadow-sm"
+              >
+                <span>{chip.emoji}</span>
+                <span>{chip.label}</span>
+                <span className="text-emerald-600">
+                  +{chip.reward}🍍
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 px-4" ref={scrollRef}>
-        <div className="space-y-5 py-4">
-          {/* Show intro text before first messages */}
-          {messages.length > 0 && (
-            <div className="text-[13px] leading-relaxed text-gray-600">
-              Go to{" "}
-              <span className="font-medium text-black underline cursor-pointer">
-                Business Analysis
-              </span>{" "}
-              to earn pineapples. You can add any of the fields to redeem
-              pineapples 🍍
-            </div>
-          )}
-
+      {/* Messages — scrollable area (vibe pattern: flex-1 min-h-0 overflow-y-auto) */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="space-y-1 py-3 px-2">
           {messages.map((msg) => (
             <div key={msg.id}>
               {msg.role === "user" ? (
-                /* User message: right-aligned, dark bubble */
-                <div className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl bg-[#2a2a2a] px-4 py-3 text-[13px] leading-relaxed text-white">
-                    {msg.content}
-                  </div>
-                </div>
+                <UserMessage msg={msg} />
               ) : (
-                /* Assistant message: left-aligned, plain text */
-                <div className="max-w-[90%]">
-                  <div className="text-[13px] leading-relaxed text-gray-900 whitespace-pre-wrap">
-                    {msg.content}
-                  </div>
-                  {/* Pineapple reward indicator */}
-                  {msg.pineapples_earned > 0 && (
-                    <span className="mt-1 inline-block text-xs font-semibold text-gray-900">
-                      (+{msg.pineapples_earned} 🍍)
-                    </span>
-                  )}
-                </div>
+                <AssistantMessage msg={msg} />
               )}
             </div>
           ))}
 
-          {/* Loading indicator */}
-          {sending && (
-            <div className="flex items-center gap-2">
-              <svg
-                className="h-6 w-6 animate-spin text-teal-500"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeDasharray="31.4 31.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+          {/* Typing indicator */}
+          {sending && <TypingIndicator />}
 
-      {/* Suggestion chips */}
-      <div className="flex flex-wrap gap-2 px-4 pb-3">
-        {SUGGESTION_CHIPS.map((chip) => (
-          <button
-            key={chip.label}
-            onClick={() => handleSuggestionClick(chip.label)}
-            className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-          >
-            {chip.label}{" "}
-            <span className="text-gray-700">
-              +{chip.reward}🍍
-            </span>
-          </button>
-        ))}
+          {/* Scroll anchor */}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      {/* Input area */}
-      <div className="border-t px-3 py-3">
+      {/* Input area — pinned at bottom */}
+      <div className="relative shrink-0 border-t px-3 py-3">
+        {/* Fade gradient above input */}
+        <div className="absolute -top-6 left-0 right-0 h-6 bg-gradient-to-b from-transparent to-white pointer-events-none" />
+        {/* Tag selector row */}
+        <div className="mb-2 flex items-center gap-1">
+          {TAG_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() =>
+                setSelectedTag((prev) =>
+                  prev === opt.value ? null : opt.value
+                )
+              }
+              className={`rounded-full px-2.5 py-1 text-[10px] font-medium transition-all ${
+                selectedTag === opt.value
+                  ? TAG_STYLES[opt.value].className + " ring-1 ring-offset-1"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
+              {opt.emoji} {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Textarea + send */}
         <div className="flex items-end gap-2">
           <Textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            placeholder="Share an update on your project…"
             className="min-h-[40px] max-h-[120px] resize-none rounded-xl border-gray-200 text-sm focus-visible:ring-1 focus-visible:ring-gray-300"
             rows={1}
           />
@@ -235,9 +353,14 @@ export function ChatPanel({
             disabled={!input.trim() || sending}
             className="shrink-0 rounded-xl bg-black text-white hover:bg-gray-800"
           >
-            Send
+            {sending ? "…" : "↑"}
           </Button>
         </div>
+
+        {/* Keyboard shortcut hint */}
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          Enter to send · Shift+Enter for new line
+        </p>
       </div>
     </div>
   );
