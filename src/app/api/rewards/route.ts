@@ -44,12 +44,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Rate limit check: max rewards per hour
+    // Rate limit check: max rewards per project per hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { count: rewardCount } = await supabase
       .from("reward_ledger")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
+      .eq("project_id", projectId)
       .gte("created_at", oneHourAgo);
 
     const isRateLimited = (rewardCount ?? 0) >= MAX_REWARDS_PER_HOUR;

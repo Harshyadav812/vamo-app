@@ -201,7 +201,7 @@ export function WalletClient({
 
           <TabsContent value="history">
             <Card>
-              <CardContent className="p-0">
+              <CardContent className="p-2">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -263,7 +263,7 @@ export function WalletClient({
 
           <TabsContent value="redemptions">
             <Card>
-              <CardContent className="p-0">
+              <CardContent className="p-2">
                 <Table>
                   <TableHeader>
                     <TableRow>

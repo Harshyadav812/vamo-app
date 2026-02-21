@@ -62,7 +62,7 @@ ${projectContext}
 Your job:
 1. Respond helpfully to their update or question (keep it concise, 2-3 sentences max).
 2. Extract the intent of their message. Classify as one of: feature, customer, revenue, ask, general.
-3. If the update implies progress (shipped something, talked to users, made revenue), generate an updated business analysis.
+3. If the update implies progress (shipped something, talked to users, made revenue), generate an updated business analysis based explicitly on their message. Max progress_delta is 5.
 4. Return your response as JSON:
 {
   "reply": "Your response text",
@@ -136,12 +136,16 @@ export async function getValuationOffer(
     generationConfig: { responseMimeType: "application/json" },
   });
 
-  const prompt = `You are a startup valuation engine. Based on the following project data and activity, provide a non-binding offer range and explanation.
+const prompt = `You are a startup valuation engine. Based on the following project data and activity, provide a non-binding offer range and explanation.
 
 Project: ${projectName}
 Description: ${projectDescription || "No description provided"}
 Activity Summary:
 ${activitySummary}
+
+Guidelines:
+- If there is insufficient data or traction, explicitly say so in your reasoning and provide a very low baseline valuation like $0 - $1000.
+- Valuation must be based on logged signals only. Do not hallucinate metrics.
 
 Expected response must be valid JSON matching this schema exactly:
 {

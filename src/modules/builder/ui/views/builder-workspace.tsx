@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Project, Profile, Message, ActivityEvent, Offer } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
 import { ChatPanel } from "@/modules/builder/ui/components/ChatPanel";
 import { UIPreview } from "@/modules/builder/ui/components/UIPreview";
 import { BusinessPanel } from "@/modules/builder/ui/components/BusinessPanel";
@@ -41,11 +42,13 @@ export function BuilderWorkspace({
   const [activeTab, setActiveTab] = useState<"project" | "business">("project");
   const [pineappleBalance, setPineappleBalance] = useState(profile.pineapple_balance);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [localActivityEvents, setLocalActivityEvents] = useState<ActivityEvent[]>(activityEvents);
   const [currentProject, setCurrentProject] = useState<Project>(project);
   const [showListDialog, setShowListDialog] = useState(false);
   const [showOfferDialog, setShowOfferDialog] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  const supabase = createClient();
 
   const isDesktop = useMediaQuery("(min-width: 1280px)");
   const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1279px)");
@@ -61,7 +64,38 @@ export function BuilderWorkspace({
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+
+    const channel = supabase
+      .channel('workspace-changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'projects', filter: `id=eq.${project.id}` },
+        (payload) => {
+          setCurrentProject((prev) => ({ ...prev, ...payload.new }));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'activity_events', filter: `project_id=eq.${project.id}` },
+        (payload) => {
+          setLocalActivityEvents((prev) => [payload.new as ActivityEvent, ...prev]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
+        (payload) => {
+          if (payload.new.pineapple_balance !== undefined) {
+             setPineappleBalance(payload.new.pineapple_balance);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [project.id, userId, supabase]);
 
   function handlePineappleEarned(amount: number) {
     setPineappleBalance((prev) => prev + amount);
@@ -164,7 +198,7 @@ export function BuilderWorkspace({
           userId={userId}
           messages={messages}
           latestOffer={latestOffer}
-          activityEvents={activityEvents}
+          activityEvents={localActivityEvents}
           onProjectUpdate={handleProjectUpdate}
           onPineappleEarned={handlePineappleEarned}
         />

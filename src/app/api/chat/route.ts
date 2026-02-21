@@ -116,9 +116,10 @@ export async function POST(request: Request) {
     // 4. Clean up double spaces created by removal
     aiResponse = aiResponse.replace(/\s+/g, " ").trim();
 
-    // Update Progress Score if needed
+    // Update Progress Score if needed (Clamp delta to max 5)
     if (businessUpdate.progress_delta > 0) {
-      const newScore = Math.min(100, project.progress_score + businessUpdate.progress_delta);
+      const clampedDelta = Math.min(businessUpdate.progress_delta, 5);
+      const newScore = Math.min(100, project.progress_score + clampedDelta);
       if (newScore !== project.progress_score) {
         await supabase
           .from("projects")

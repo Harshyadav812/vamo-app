@@ -54,54 +54,52 @@ export async function POST(request: Request) {
       );
     }
 
-    // Deduct balance
-    await supabase
-      .from("profiles")
-      .update({
-        pineapple_balance: profile.pineapple_balance - amount,
-      })
-      .eq("id", user.id);
-
-    // Create redemption record
-    const { data: redemption, error: redemptionError } = await supabase
-      .from("redemptions")
-      .insert({
-        user_id: user.id,
-        amount,
-        status: "pending",
-      })
-      .select()
-      .single();
-
-    if (redemptionError) {
-      // Roll back balance deduction
-      await supabase
-        .from("profiles")
-        .update({
-          pineapple_balance: profile.pineapple_balance,
-        })
-        .eq("id", user.id);
-      throw redemptionError;
+    // Use atomic RPC for redemption
+    const idempotencyKey = `redeem-${Date.now()}-${amount}`; // Generating early since RPC handles redemption record
+    
+    interface RpcResponse {
+      success: boolean;
+      new_balance: number;
+      redemption_id: string;
     }
 
-    // Insert negative amount into reward_ledger to represent spend
-    await supabase.from("reward_ledger").insert({
-      user_id: user.id,
-      event_type: "reward_redeemed", // Using a special string to denote redemption
-      amount: -amount,
-      idempotency_key: `redeem-${redemption.id}`, // Unique to this redemption
-    });
+    const { data: result, error: rpcError } = await supabase.rpc(
+      "redeem_pineapples",
+      {
+        p_user_id: user.id,
+        p_amount: amount,
+        p_idempotency_key: idempotencyKey,
+      }
+    );
 
-    // Insert activity event
+    if (rpcError) {
+      if (rpcError.message.includes("Insufficient balance")) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "INSUFFICIENT_BALANCE",
+              message: "You do not have enough pineapples.",
+            },
+          },
+          { status: 400 }
+        );
+      }
+      throw rpcError;
+    }
+
+    const typedResult = result as unknown as RpcResponse;
+
+    // Insert activity event (append-only timeline)
     await supabase.from("activity_events").insert({
       user_id: user.id,
       event_type: "reward_redeemed",
-      metadata: { amount, redemption_id: redemption.id },
+      metadata: { amount, redemption_id: typedResult.redemption_id },
     });
 
     return NextResponse.json({
-      redemption,
-      newBalance: profile.pineapple_balance - amount,
+      success: true,
+      newBalance: typedResult.new_balance,
+      redemption: { id: typedResult.redemption_id, amount, status: "pending" },
     });
   } catch (err) {
     console.error("Redeem API error:", err);
