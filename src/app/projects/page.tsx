@@ -21,13 +21,24 @@ export default async function ProjectsPage() {
     .eq("id", user.id)
     .single();
 
-  // Fetch projects where user is owner OR user is a collaborator
-  // Since we have an RLS policy that already scopes projects table to 
-  // ONLY projects the user owns OR is a collaborator on, we can just query all!
-  // It's much simpler and safer to rely on RLS than writing complex OR queries.
+  // 1. Fetch project IDs where the user is an active collaborator
+  const { data: collabData } = await supabase
+    .from("collaborators")
+    .select("project_id")
+    .eq("user_id", user.id);
+
+  const collabProjectIds = collabData?.map((c) => c.project_id) || [];
+  
+  // 2. Fetch projects explicitly by owner OR active collaborator
+  // We cannot rely purely on RLS select() because listed projects are public and would all show up!
+  const orCondition = collabProjectIds.length > 0
+    ? `owner_id.eq.${user.id},id.in.(${collabProjectIds.join(",")})`
+    : `owner_id.eq.${user.id}`;
+
   const { data: projects } = await supabase
     .from("projects")
     .select("*")
+    .or(orCondition)
     .order("updated_at", { ascending: false });
 
   return (
@@ -86,7 +97,14 @@ export default async function ProjectsPage() {
               <Link key={project.id} href={`/builder/${project.id}`}>
                 <Card className="transition-shadow hover:shadow-md cursor-pointer">
                   <CardHeader>
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      {project.name}
+                      {project.owner_id !== user.id && (
+                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold tracking-wider uppercase">
+                          Collaborator
+                        </span>
+                      )}
+                    </CardTitle>
                     <CardDescription>
                       {project.description || "No description"}
                     </CardDescription>
