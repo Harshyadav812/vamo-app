@@ -12,9 +12,10 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { ListForSaleDialog } from "@/modules/builder/ui/components/ListForSaleDialog";
 import { OfferDialog } from "@/modules/builder/ui/components/OfferDialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -171,11 +172,48 @@ export function BuilderWorkspace({
     </div>
   );
 
-  // SSR guard — render nothing until hydrated so media queries are accurate
+  // SSR guard — render a skeleton until hydrated so media queries are accurate
   if (!isMounted) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-pulse text-lg text-muted-foreground">Loading builder…</div>
+      <div className="flex h-screen w-full flex-col md:flex-row overflow-hidden bg-white">
+        {/* Left/Sidebar Skeleton */}
+        <div className="w-full md:w-[30%] flex-col border-r flex">
+          <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+            <Skeleton className="h-6 w-24" />
+          </header>
+          <div className="flex-1 p-4 space-y-4">
+            <Skeleton className="h-12 w-3/4 rounded-2xl rounded-tl-sm self-start ml-8" />
+            <Skeleton className="h-16 w-5/6 rounded-2xl rounded-tr-sm self-end" />
+            <Skeleton className="h-10 w-2/3 rounded-2xl rounded-tl-sm self-start ml-8" />
+          </div>
+          <div className="h-16 border-t p-3">
+            <Skeleton className="h-10 w-full rounded-xl" />
+          </div>
+        </div>
+        
+        {/* Right/Main panel Skeleton */}
+        <div className="w-full md:w-[70%] flex flex-col">
+          <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-20 rounded-full" />
+              <Skeleton className="h-8 w-20 rounded-full" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24" />
+            </div>
+          </header>
+          <div className="flex-1 p-6 space-y-6">
+            <Skeleton className="h-8 w-1/3" />
+            <Skeleton className="h-32 w-full rounded-xl" />
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

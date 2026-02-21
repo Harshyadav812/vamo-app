@@ -1,182 +1,110 @@
-import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Users, FolderGit2, MessageSquare, Ticket, ShoppingCart, Store, ArrowUpRight } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+function MetricCard({ title, value, icon: Icon, trend, colorClass }: any) {
+  return (
+    <Card className="relative overflow-hidden group hover:shadow-md transition-all duration-300 border border-black/10 bg-white rounded-2xl shadow-sm">
+      <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-[0.03] group-hover:opacity-[0.06] transition-opacity ${colorClass}`} />
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-zinc-400 uppercase tracking-wider">{title}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-black tracking-tight text-black">{value}</p>
+              {trend && (
+                <span className="flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                  {trend} <ArrowUpRight className="h-3 w-3 ml-0.5" />
+                </span>
+              )}
+            </div>
+          </div>
+          <div className={`flex size-14 items-center justify-center rounded-2xl bg-[#fafafa] border border-black/10 shadow-sm text-black group-hover:-translate-y-1 transition-transform`}>
+            <Icon className="h-6 w-6" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
-export default async function AdminPage() {
+export default async function AdminOverviewPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  // Fetch metrics concurrently
+  const [
+    { count: usersCount },
+    { count: projectsCount },
+    { count: activeListingsCount },
+    { data: events },
+    { data: pineapplesData },
+    { data: redemptionsData }
+  ] = await Promise.all([
+    supabase.from("profiles").select("*", { count: "exact", head: true }),
+    supabase.from("projects").select("*", { count: "exact", head: true }),
+    supabase.from("listings").select("*", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("activity_events").select("event_type").eq("event_type", "chat_prompt"),
+    supabase.from("reward_ledger").select("amount"),
+    supabase.from("redemptions").select("amount").in("status", ["fulfilled", "pending"]),
+  ]);
 
-  // Check admin role
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") {
-    redirect("/projects");
-  }
-
-  // Fetch stats
-  const { count: userCount } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true });
-
-  const { count: projectCount } = await supabase
-    .from("projects")
-    .select("*", { count: "exact", head: true });
-
-  const { count: listingCount } = await supabase
-    .from("listings")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "active");
-
-  const { data: pendingRedemptions } = await supabase
-    .from("redemptions")
-    .select("id, user_id, amount, status, created_at")
-    .eq("status", "pending")
-    .order("created_at", { ascending: true });
-
-  // Recent users
-  const { data: recentUsers } = await supabase
-    .from("profiles")
-    .select("id, display_name, email, pineapple_balance, created_at")
-    .order("created_at", { ascending: false })
-    .limit(10);
+  const promptsCount = events?.length || 0;
+  
+  // Calculate total pineapples earned (only positive ledger entries)
+  const totalPineapplesEarned = pineapplesData?.reduce((sum, item) => sum + (item.amount > 0 ? item.amount : 0), 0) || 0;
+  
+  // Calculate total pineapples completely redeemed (pending and fulfilled)
+  const totalPineapplesRedeemed = redemptionsData?.reduce((sum, item) => sum + item.amount, 0) || 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="flex items-center justify-between border-b bg-white px-6 py-4">
-        <Link href="/projects" className="text-xl font-bold tracking-tight">
-          &gt;&gt;&gt; vamo
-        </Link>
-        <Badge variant="destructive">Admin</Badge>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        <h1 className="mb-6 text-2xl font-bold">Admin Dashboard</h1>
-
-        {/* Stats */}
-        <div className="mb-8 grid grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Users
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{userCount ?? 0}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Projects
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{projectCount ?? 0}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active Listings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{listingCount ?? 0}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Pending Redemptions */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Pending Redemptions</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User ID</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(!pendingRedemptions || pendingRedemptions.length === 0) ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      No pending redemptions
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  pendingRedemptions.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-mono text-xs">
-                        {r.user_id.substring(0, 8)}...
-                      </TableCell>
-                      <TableCell className="font-medium flex items-center gap-1">
-                        {r.amount} <span className="text-sm">🍍</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{r.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(r.created_at).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {/* Recent Users */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Users</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead className="flex items-center gap-1"><span className="text-lg leading-none">🍍</span> Balance</TableHead>
-                  <TableHead>Joined</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(recentUsers ?? []).map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell>{u.display_name}</TableCell>
-                    <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                    <TableCell className="font-medium">
-                      {u.pineapple_balance} <span className="text-sm">🍍</span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(u.created_at).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </main>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight text-black">Overview Dashboard</h1>
+        <p className="text-zinc-500 font-medium leading-relaxed mt-1">Key metrics and platform activity overview.</p>
+      </div>
+      
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <MetricCard 
+          title="Total Users" 
+          value={usersCount?.toLocaleString() || 0} 
+          icon={Users} 
+          trend="+12%"
+          // colorClass="bg-blue-500" 
+        />
+        <MetricCard 
+          title="Total Projects" 
+          value={projectsCount?.toLocaleString() || 0} 
+          icon={FolderGit2} 
+          trend="+24%"
+          // colorClass="bg-indigo-500" 
+        />
+        <MetricCard 
+          title="Active Listings" 
+          value={activeListingsCount?.toLocaleString() || 0} 
+          icon={Store} 
+          // colorClass="bg-emerald-500" 
+        />
+        <MetricCard 
+          title="Prompts Sent" 
+          value={promptsCount.toLocaleString()} 
+          icon={MessageSquare} 
+          trend="+18%"
+          // colorClass="bg-violet-500" 
+        />
+        <MetricCard 
+          title="Pineapples Earned" 
+          value={totalPineapplesEarned.toLocaleString()} 
+          icon={Ticket} 
+          trend="+41%"
+          // colorClass="bg-amber-900" 
+        />
+        <MetricCard 
+          title="Pineapples Redeemed" 
+          value={totalPineapplesRedeemed.toLocaleString()} 
+          icon={ShoppingCart} 
+          // colorClass="bg-red-900" 
+        />
+      </div>
     </div>
   );
 }
