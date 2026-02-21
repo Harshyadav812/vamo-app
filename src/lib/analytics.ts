@@ -29,8 +29,9 @@ export async function trackEvent(eventName: AnalyticsEventName, properties: Reco
 
     if (error) {
       console.error("[Analytics] Error tracking event:", error);
-    } else {
-      console.log(`[Analytics] Tracked ${eventName}`, properties);
+    }
+    if (process.env.NODE_ENV !== "production") {
+      // Fallback or dev-only logging removed 
     }
   } catch (err) {
     console.error("[Analytics] Unexpected error:", err);

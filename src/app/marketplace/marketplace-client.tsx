@@ -11,18 +11,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { LineChart, MessageSquare, Zap, AlertTriangle, ExternalLink } from "lucide-react";
+import { LineChart, MessageSquare, Zap, AlertTriangle, ExternalLink, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface MarketplaceClientProps {
-  listings: (Listing & { project: Project })[];
+  listings: (Listing & { 
+    project: Project;
+    profiles?: any;
+  })[];
   user: any;
   isAdmin?: boolean;
 }
 
 export function MarketplaceClient({ listings: initialListings, user, isAdmin }: MarketplaceClientProps) {
   const [listings, setListings] = useState(initialListings);
-  const [selectedListing, setSelectedListing] = useState<(Listing & { project: Project }) | null>(null);
+  const [selectedListing, setSelectedListing] = useState<(Listing & { project: Project, profiles?: any }) | null>(null);
   const [isDelisting, setIsDelisting] = useState(false);
   const [isReasonDialogOpen, setIsReasonDialogOpen] = useState(false);
   const [delistReason, setDelistReason] = useState("");
@@ -85,7 +88,7 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
           return (
             <Card
               key={listing.id}
-              className="group overflow-hidden transition-all hover:shadow-lg hover:border-green-200 cursor-pointer"
+              className="group overflow-hidden transition-all hover:shadow-lg hover:border-gray-300 cursor-pointer p-0 gap-0"
               onClick={() => setSelectedListing(listing)}
             >
               <div className="aspect-video w-full bg-gray-100 relative overflow-hidden">
@@ -128,7 +131,7 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
                      <span className="scale-90">Prompts</span>
                    </div>
                    <div className="flex flex-col items-center">
-                     <span className="font-bold text-gray-900">{metrics.traction || 0}</span>
+                     <span className="font-bold text-gray-900">{metrics.total_traction !== undefined ? metrics.total_traction : (metrics.traction || 0)}</span>
                      <span className="scale-90">Signals</span>
                    </div>
                 </div>
@@ -163,7 +166,23 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
                      Listed {new Date(selectedListing.created_at).toLocaleDateString()}
                   </Badge>
                   <SheetTitle className="text-2xl mt-0">{selectedListing.title}</SheetTitle>
-                  <div className="flex items-center gap-2 mt-2">
+                  
+                  {/* Seller Info */}
+                  <div className="flex items-center gap-3 mt-4 mb-2 bg-gray-50 p-3 rounded-lg border">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-sm font-medium text-white overflow-hidden">
+                      {selectedListing.profiles?.avatar_url ? (
+                        <img src={selectedListing.profiles.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        (selectedListing.profiles?.display_name || selectedListing.profiles?.email || "?")[0]?.toUpperCase()
+                      )}
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-semibold text-gray-900 leading-none">{selectedListing.profiles?.display_name || "Anonymous Maker"}</p>
+                      <p className="text-xs mt-1 text-green-600 font-medium tracking-tight">Verified Seller</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-4">
                     <Badge variant="outline" className="text-lg px-3 py-1 border-green-200 text-green-700 bg-green-50">
                       ${((selectedListing.asking_price || 0) / 100).toLocaleString()}
                     </Badge>
@@ -177,7 +196,7 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
 
                 {/* Description */}
                 <div className="space-y-2 shrink-0">
-                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Description</h4>
+                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider mt-2">Description</h4>
                   <p className="text-sm leading-relaxed whitespace-pre-line text-gray-700">
                     {selectedListing.description}
                   </p>
@@ -186,19 +205,23 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
                 {/* Metrics */}
                 <div className="grid grid-cols-3 gap-4 shrink-0">
                   <MetricCard 
-                    icon={<LineChart className="w-4 h-4 text-green-600"/>}
+                    icon={<LineChart className="w-4 h-4 text-gray-600"/>}
                     label="Progress"
                     value={`${selectedListing.metrics?.progress || 0}%`}
                   />
                   <MetricCard 
-                    icon={<MessageSquare className="w-4 h-4 text-blue-600"/>}
+                    icon={<MessageSquare className="w-4 h-4 text-gray-600"/>}
                     label="Prompts"
                     value={selectedListing.metrics?.prompts || 0}
                   />
                   <MetricCard 
-                    icon={<Zap className="w-4 h-4 text-orange-600"/>}
-                    label="Traction"
-                    value={selectedListing.metrics?.traction || 0}
+                    icon={<Sparkles className="w-4 h-4 text-gray-500"/>}
+                    label="Signals"
+                    value={
+                      (selectedListing.metrics?.total_traction ?? 
+                      selectedListing.metrics?.traction ?? 
+                      ((selectedListing.metrics?.features || 0) + (selectedListing.metrics?.customers || 0) + (selectedListing.metrics?.revenue || 0))) || 0
+                    }
                   />
                 </div>
                 
@@ -219,12 +242,24 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
                 <div className="space-y-4 pt-4 border-t shrink-0 mb-4">
                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Activity Snapshot</h4>
                    <div className="space-y-4 pl-2 border-l-2 border-slate-200">
-                      <TimelineItem 
-                         title={`Reached ${selectedListing.metrics?.traction || 0} traction signals`}
-                         date={selectedListing.metrics?.snapshot_date}
-                         icon={<Zap className="w-3 h-3 text-white"/>}
-                         color="bg-orange-500"
-                      />
+                      {selectedListing.metrics?.traction_events && selectedListing.metrics.traction_events.length > 0 ? (
+                        selectedListing.metrics.traction_events.map((evt: any, i: number) => (
+                          <TimelineItem 
+                            key={i}
+                            title={evt.label}
+                            date={evt.date}
+                            icon={<Zap className="w-3 h-3 text-white"/>}
+                            color="bg-orange-500"
+                          />
+                        ))
+                      ) : (
+                        <TimelineItem 
+                           title={`Reached ${selectedListing.metrics?.total_traction ?? selectedListing.metrics?.traction ?? 0} traction signals`}
+                           date={selectedListing.metrics?.snapshot_date}
+                           icon={<Zap className="w-3 h-3 text-white"/>}
+                           color="bg-orange-500"
+                        />
+                      )}
                        <TimelineItem 
                          title={`Achieved ${selectedListing.metrics?.progress || 0}% development progress`}
                          date={selectedListing.metrics?.snapshot_date}
@@ -245,9 +280,11 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
               {/* Sticky Footer */}
               <div className="shrink-0 p-6 border-t bg-white flex flex-col gap-3">
                  {user ? (
-                   <Button className="w-full bg-green-600 hover:bg-green-700 text-lg py-6 shadow-lg shadow-green-900/10">
-                     Make an Offer
-                   </Button>
+                   <a href={`mailto:${selectedListing.profiles?.email || ""}?subject=Offer for ${selectedListing.title} on Vamo`} className="w-full">
+                     <Button className="w-full bg-green-600 hover:bg-green-700 text-lg py-6 shadow-lg shadow-green-900/10 cursor-pointer">
+                       Make an Offer
+                     </Button>
+                   </a>
                  ) : (
                    <Button variant="secondary" className="w-full" disabled>
                      Log in to Buy

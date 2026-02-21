@@ -60,12 +60,12 @@ export async function getBuilderChatResponse(
 ${projectContext}
 
 Your job:
-1. Respond helpfully to their update or question (keep it concise, 2-3 sentences max).
+1. Respond helpfully to their update or question (keep it concise, 2-3 sentences max). Always include a very brief and relevant suggestion for their next step to keep momentum going.
 2. Extract the intent of their message. Classify as one of: feature, customer, revenue, ask, general.
 3. If the update implies progress (shipped something, talked to users, made revenue), generate an updated business analysis based explicitly on their message. Max progress_delta is 5.
 4. Return your response as JSON:
 {
-  "reply": "Your response text",
+  "reply": "Your response text containing the acknowledgement and the brief next step",
   "intent": "feature|customer|revenue|ask|general",
   "business_update": {
     "progress_delta": 0-5,

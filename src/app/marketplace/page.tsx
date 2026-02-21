@@ -33,12 +33,15 @@ export default async function MarketplacePage() {
       owner_id,
       images,
       metrics,
-      allow_offers
+      allow_offers,
+      profiles (
+        display_name,
+        email,
+        avatar_url
+      )
     `)
     .eq("status", "active")
     .order("created_at", { ascending: false });
-
-  console.log("Marketplace listings fetch:", listings?.length);
 
   // Fetch project details for each listing
   const projectIds = listings?.map((l) => l.project_id) ?? [];

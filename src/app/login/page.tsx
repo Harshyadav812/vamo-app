@@ -42,7 +42,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
-            <span className="text-black">&gt;&gt;&gt; vamo</span>
+            <span className="text-black italic">&gt;&gt;&gt; vamo</span>
           </CardTitle>
           <CardDescription>Log in to continue building</CardDescription>
         </CardHeader>

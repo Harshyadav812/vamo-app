@@ -91,7 +91,7 @@ function formatRelativeTime(dateStr: string): string {
 function TypingIndicator() {
   return (
     <div className="flex items-start gap-2.5 px-2 pb-4">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-emerald-500 text-[11px] font-bold text-white">
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-teal-400 to-emerald-500 text-[11px] font-bold text-white">
         V
       </div>
       <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3">
@@ -140,7 +140,7 @@ function AssistantMessage({ msg }: { msg: Message }) {
     <div className="group flex flex-col gap-1 pb-3 pr-10">
       {/* Avatar + name row */}
       <div className="flex items-center gap-2 pl-2">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-emerald-500 text-[11px] font-bold text-white">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-teal-400 to-emerald-500 text-[11px] font-bold text-white">
           V
         </div>
         <span className="text-xs font-semibold text-gray-800">Vamo</span>
@@ -429,7 +429,7 @@ export function ChatPanel({
       {/* Input area — pinned at bottom */}
       <div className="relative shrink-0 border-t px-3 py-3">
         {/* Fade gradient above input */}
-        <div className="absolute -top-6 left-0 right-0 h-6 bg-gradient-to-b from-transparent to-white pointer-events-none" />
+        <div className="absolute -top-6 left-0 right-0 h-6 bg-linear-to-b from-transparent to-white pointer-events-none" />
         {/* Tag selector row */}
         <div className="mb-2 flex items-center gap-1">
           {TAG_OPTIONS.map((opt) => (

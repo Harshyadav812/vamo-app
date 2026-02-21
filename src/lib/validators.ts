@@ -14,7 +14,7 @@ export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export const chatMessageSchema = z.object({
   projectId: z.uuid("Invalid project ID"),
   message: z.string().min(1, "Message cannot be empty").max(5000),
-  tag: z.enum(["feature", "bug", "improvement", "milestone", "general"]).optional(),
+  tag: z.enum(["feature", "bug", "improvement", "milestone", "general", "customer", "revenue", "ask"]).optional(),
 });
 
 export type ChatMessageInput = z.infer<typeof chatMessageSchema>;

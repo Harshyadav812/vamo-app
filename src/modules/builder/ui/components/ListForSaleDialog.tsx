@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Image as ImageIcon, LineChart, DollarSign, CheckCircle2 } from "lucide-react";
+import { Loader2, Sparkles, Image as ImageIcon, LineChart, DollarSign, CheckCircle2, MessageSquare, Zap } from "lucide-react";
 
 interface ListForSaleDialogProps {
   open: boolean;
@@ -46,7 +46,8 @@ export function ListForSaleDialog({
   const [metrics, setMetrics] = useState({
     progress: project.progress_score,
     prompts: 0,
-    traction: 0,
+    total_traction: 0,
+    traction_events: [] as { label: string; date: string }[],
     snapshot_date: new Date().toISOString(),
   });
 
@@ -54,17 +55,23 @@ export function ListForSaleDialog({
   useEffect(() => {
     if (open) {
       const promptCount = activityEvents.filter((e) => e.event_type === "chat_prompt").length;
-      // "Traction" is vague, let's count anything that isn't just a basic prompt
-      const tractionCount = activityEvents.filter(
-        (e) =>
-          e.event_type !== "chat_prompt" &&
-          e.event_type !== "profile_updated"
-      ).length;
+      
+      const rawTraction = activityEvents.filter((e) => 
+        ["feature_shipped", "customer_added", "revenue_logged"].includes(e.event_type)
+      );
+
+      const tractionEventsList = rawTraction
+        .map((e) => ({
+           label: String(e.metadata?.description || e.event_type),
+           date: e.created_at
+        }))
+        .slice(0, 5);
 
       setMetrics({
         progress: project.progress_score,
         prompts: promptCount,
-        traction: tractionCount,
+        total_traction: rawTraction.length,
+        traction_events: tractionEventsList,
         snapshot_date: new Date().toISOString(),
       });
       setStep(1); // Reset to start
@@ -141,7 +148,6 @@ export function ListForSaleDialog({
       });
 
       // Log analytics
-      console.log(`Analytics: Listing Published for project ${project.id} by user ${userId}`);
       trackEvent("listing_created", { projectId: project.id, listingId: listing?.id || null });
 
       toast.success("Project listed successfully!", {
@@ -205,22 +211,36 @@ export function ListForSaleDialog({
                 These metrics will be displayed on your listing to prove engagement.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-lg flex flex-col items-center justify-center text-center">
                 <LineChart className="w-5 h-5 mb-2 text-green-600" />
                 <span className="text-2xl font-bold">{metrics.progress}%</span>
                 <span className="text-xs text-muted-foreground">Progress</span>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg flex flex-col items-center justify-center text-center">
-                <MessageSquareIcon className="w-5 h-5 mb-2 text-blue-600" />
-                <span className="text-2xl font-bold">{metrics.prompts}</span>
-                <span className="text-xs text-muted-foreground">Prompts</span>
+                <Sparkles className="w-5 h-5 mb-2 text-orange-500" />
+                <span className="text-2xl font-bold">{metrics.total_traction}</span>
+                <span className="text-xs text-muted-foreground">Traction Signals</span>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg flex flex-col items-center justify-center text-center">
-                <ZapIcon className="w-5 h-5 mb-2 text-orange-600" />
-                <span className="text-2xl font-bold">{metrics.traction}</span>
-                <span className="text-xs text-muted-foreground">Signals</span>
-              </div>
+            </div>
+            
+            {/* Traction Signals Preview */}
+            <div className="space-y-2 mt-4">
+              <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Top Traction Signals Captured</Label>
+              {metrics.traction_events.length > 0 ? (
+                <div className="space-y-2">
+                  {metrics.traction_events.map((evt, i) => (
+                    <div key={i} className="text-sm bg-gray-50 p-2 rounded-md border text-gray-700 flex items-start gap-2">
+                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                       <span className="line-clamp-2">{evt.label}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded-md border text-center">
+                  No descriptive traction signals recorded yet.
+                </div>
+              )}
             </div>
              <p className="text-xs text-gray-500 text-center">
                Data snapshot taken: {new Date(metrics.snapshot_date).toLocaleDateString()}
@@ -245,7 +265,7 @@ export function ListForSaleDialog({
                   <div className="flex flex-col items-center gap-2 cursor-pointer relative w-full h-32 justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-100 transition-colors">
                     <ImageIcon className="w-8 h-8 text-gray-400" />
                     <span className="text-sm font-medium text-gray-600">Click to upload screenshot</span>
-                    <span className="text-xs text-gray-400">Max size: 400KB</span>
+                    <span className="text-xs text-gray-400">Max size: 100KB</span>
                     <input 
                       type="file" 
                       accept="image/jpeg,image/png,image/webp,image/gif"
@@ -254,9 +274,9 @@ export function ListForSaleDialog({
                         const file = e.target.files?.[0];
                         if (!file) return;
                         
-                        // Validate size (400kb)
-                        if (file.size > 400 * 1024) {
-                           toast.error("File excessively large. Please upload an image under 400KB.");
+                        // Validate size (100kb)
+                        if (file.size > 100 * 1024) {
+                           toast.error("File excessively large. Please upload an image under 100KB.");
                            return;
                         }
 
@@ -293,10 +313,10 @@ export function ListForSaleDialog({
       case 4: // Pricing
         return (
           <div className="space-y-4">
-             <div className="bg-green-50 p-4 rounded-lg border border-green-100 text-center">
-                <Label className="text-green-800">Asking Price (USD)</Label>
+             <div className=" p-4 rounded-lg border border-gray-200 text-center">
+                <Label className="text-gray-800">Asking Price (USD)</Label>
                 <div className="relative mt-2 max-w-xs mx-auto">
-                  <DollarSign className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+                  <DollarSign className="absolute left-3 top-3.5 h-5 w-5 text-gray-900" />
                   <Input
                     type="number"
                     className="pl-10 text-lg font-bold h-12"
@@ -305,7 +325,7 @@ export function ListForSaleDialog({
                     onChange={(e) => setAskingPrice(e.target.value)}
                   />
                 </div>
-                <p className="text-xs text-green-700 mt-2">
+                <p className="text-xs text-gray-900 mt-2">
                   A fair price attracts serious buyers. Vamo estimated $1k-$5k.
                 </p>
              </div>
@@ -322,10 +342,10 @@ export function ListForSaleDialog({
                <p className="text-sm text-gray-600 line-clamp-3">
                  {description}
                </p>
-               <div className="flex gap-4 text-sm text-gray-500 pt-2 border-t">
-                 <span className="flex items-center gap-1"><LineChart className="w-3 h-3"/> {metrics.progress}%</span>
-                 <span className="flex items-center gap-1"><MessageSquareIcon className="w-3 h-3"/> {metrics.prompts} prompts</span>
-                 <span className="flex items-center gap-1"><ZapIcon className="w-3 h-3"/> {metrics.traction} signals</span>
+               <div className="flex flex-wrap gap-4 text-sm text-gray-500 pt-2 border-t mt-4">
+                 <span className="flex items-center gap-1"><LineChart className="w-3 h-3 text-green-600"/> {metrics.progress}%</span>
+                 <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-orange-500"/> {metrics.total_traction} Signals</span>
+                 <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3 text-blue-500"/> {metrics.prompts} Prompts</span>
                </div>
             </div>
             <p className="text-xs text-gray-500 text-center">
