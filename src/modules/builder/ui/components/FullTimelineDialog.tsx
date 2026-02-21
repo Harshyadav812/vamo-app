@@ -97,8 +97,8 @@ export function FullTimelineDialog({
       });
     }
 
-    // Sort ascending (oldest first) per requirements for full view
-    filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    // Sort descending (newest first)
+    filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return filtered;
   }, [activityEvents, searchQuery, selectedType]);
@@ -170,20 +170,25 @@ export function FullTimelineDialog({
                         </time>
                       </div>
                       
-                      {event.metadata && Object.keys(event.metadata).length > 0 && (
+                      {event.metadata && !!(
+                          (event.metadata as any).description || 
+                          (event.metadata as any).name || 
+                          (event.metadata as any).value || 
+                          (event.metadata as any).amount
+                      ) && (
                         <div className="text-sm text-gray-600 bg-gray-50 rounded p-2.5 mt-1 border">
-                           {event.metadata.description ? <p className="mb-1"><strong>Description:</strong> {String(event.metadata.description)}</p> : null}
-                           {event.metadata.name ? <p className="mb-1"><strong>Name:</strong> {String(event.metadata.name)}</p> : null}
-                           {event.metadata.value ? <p className="mb-1 line-clamp-2"><strong>Value:</strong> {String(event.metadata.value)}</p> : null}
-                           {event.metadata.amount ? <p className="mb-1"><strong>Amount:</strong> {String(event.metadata.amount)}</p> : null}
+                           {(event.metadata as any).description ? <p className="mb-1"><strong>Description:</strong> {String((event.metadata as any).description)}</p> : null}
+                           {(event.metadata as any).name ? <p className="mb-1"><strong>Name:</strong> {String((event.metadata as any).name)}</p> : null}
+                           {(event.metadata as any).value ? <p className="mb-1 line-clamp-2"><strong>Value:</strong> {String((event.metadata as any).value)}</p> : null}
+                           {(event.metadata as any).amount ? <p className="mb-1"><strong>Amount:</strong> {String((event.metadata as any).amount)}</p> : null}
                            
                            {/* Fallback code payload for specific keys not destructured above */}
-                           <details className="cursor-pointer text-xs text-gray-400 hover:text-gray-600">
-                             <summary>Raw Metadata</summary>
+                           {/* <details className="cursor-pointer text-xs text-gray-400 hover:text-gray-600">
+                             <summary>Metadata</summary>
                              <pre className="mt-2 text-[10px] overflow-x-auto bg-gray-100 p-2 rounded">
                                {JSON.stringify(event.metadata, null, 2)}
                              </pre>
-                           </details>
+                           </details> */}
                         </div>
                       )}
                     </div>

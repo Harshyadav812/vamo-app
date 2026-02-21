@@ -9,20 +9,52 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { LineChart, MessageSquare, Zap, AlertTriangle, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 
 interface MarketplaceClientProps {
   listings: (Listing & { project: Project })[];
   user: any;
+  isAdmin?: boolean;
 }
 
-export function MarketplaceClient({ listings, user }: MarketplaceClientProps) {
+export function MarketplaceClient({ listings: initialListings, user, isAdmin }: MarketplaceClientProps) {
+  const [listings, setListings] = useState(initialListings);
   const [selectedListing, setSelectedListing] = useState<(Listing & { project: Project }) | null>(null);
+  const [isDelisting, setIsDelisting] = useState(false);
 
   const isOutdated = (snapshotDate: string) => {
     if (!snapshotDate) return false;
     const days = (new Date().getTime() - new Date(snapshotDate).getTime()) / (1000 * 3600 * 24);
     return days > 7;
   };
+
+  const isOwnerOrAdmin = selectedListing && (isAdmin || (user && selectedListing.owner_id === user.id));
+
+  async function handleDelist() {
+    if (!selectedListing) return;
+    setIsDelisting(true);
+
+    try {
+      const res = await fetch("/api/marketplace/delist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId: selectedListing.id }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to remove listing");
+      }
+
+      toast.success("Listing removed from the marketplace.");
+      setListings(listings.filter(l => l.id !== selectedListing.id));
+      setSelectedListing(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove listing");
+    } finally {
+      setIsDelisting(false);
+    }
+  }
 
   return (
     <>
@@ -193,7 +225,7 @@ export function MarketplaceClient({ listings, user }: MarketplaceClientProps) {
               </div>
 
               {/* Sticky Footer */}
-              <div className="shrink-0 p-6 border-t bg-white">
+              <div className="shrink-0 p-6 border-t bg-white flex flex-col gap-3">
                  {user ? (
                    <Button className="w-full bg-green-600 hover:bg-green-700 text-lg py-6 shadow-lg shadow-green-900/10">
                      Make an Offer
@@ -201,6 +233,16 @@ export function MarketplaceClient({ listings, user }: MarketplaceClientProps) {
                  ) : (
                    <Button variant="secondary" className="w-full" disabled>
                      Log in to Buy
+                   </Button>
+                 )}
+                 {isOwnerOrAdmin && (
+                   <Button
+                     variant="destructive"
+                     className="w-full text-sm py-4 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-100 shadow-none"
+                     onClick={handleDelist}
+                     disabled={isDelisting}
+                   >
+                     {isDelisting ? "Removing..." : "Remove Listing"}
                    </Button>
                  )}
               </div>

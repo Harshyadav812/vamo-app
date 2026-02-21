@@ -19,7 +19,7 @@ export default function HomePage() {
       <nav className="sticky top-0 z-50 border-b border-black/5 bg-[#fafafa]/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-tight">&gt;&gt;&gt; vamo</span>
+            <span className="text-xl font-extrabold italic tracking-tight">&gt;&gt;&gt; vamo</span>
           </Link>
           <div className="hidden items-center gap-8 text-sm font-medium text-zinc-500 md:flex">
             <a href="#features" className="hover:text-black transition-colors">Features</a>
@@ -77,9 +77,8 @@ export default function HomePage() {
           </div>
         </div>
         
-        {/* Mock Application Graphic (The "Wow" Factor) */}
         <div className="mx-auto mt-24 max-w-5xl relative">
-          <div className="absolute inset-x-4 top-0 blur-3xl h-64 bg-gradient-to-b from-zinc-200/50 to-transparent -z-10 rounded-full" />
+          <div className="absolute inset-x-4 top-0 blur-3xl h-64 bg-linear-to-b from-zinc-200/50 to-transparent -z-10 rounded-full" />
           
           <div className="rounded-3xl border border-black/10 bg-white shadow-2xl p-2 md:p-4 overflow-hidden transform perspective-1000">
             <div className="rounded-2xl border border-black/5 bg-[#f4f4f5] overflow-hidden flex flex-col md:flex-row min-h-[500px]">
@@ -88,7 +87,7 @@ export default function HomePage() {
               <div className="w-full md:w-[320px] bg-[#f9fafb] border-r border-black/5 p-6 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-8">
-                    <span className="font-bold text-xl tracking-tight">&gt;&gt;&gt; vamo</span>
+                    <span className="font-bold text-xl italic tracking-tight">&gt;&gt;&gt; vamo</span>
                     <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-black/10 rounded-full shadow-sm">
                       <span className="font-bold">5</span>
                       <span>🍍</span>
@@ -248,7 +247,7 @@ export default function HomePage() {
       <footer className="px-6 py-12 md:py-16 bg-white border-t border-black/5">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-tight">&gt;&gt;&gt; vamo</span>
+            <span className="text-xl font-bold italic tracking-tight">&gt;&gt;&gt; vamo</span>
             <span className="text-zinc-400 font-medium">© {new Date().getFullYear()}</span>
           </div>
           <div className="flex items-center gap-8 font-medium text-zinc-500">

@@ -15,7 +15,7 @@ export default async function MarketplacePage() {
 
   let profile = null;
   if (user) {
-    const { data } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
+    const { data } = await supabase.from("profiles").select("display_name, is_admin").eq("id", user.id).single();
     profile = data;
   }
 
@@ -75,7 +75,7 @@ export default async function MarketplacePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="flex items-center justify-between border-b bg-white px-6 py-4">
-        <Link href="/projects" className="text-xl font-bold tracking-tight">
+        <Link href="/projects" className="text-xl font-extrabold italic tracking-tight">
           &gt;&gt;&gt; vamo
         </Link>
         <div className="flex items-center gap-3">
@@ -123,7 +123,7 @@ export default async function MarketplacePage() {
             </CardContent>
           </Card>
         ) : (
-           <MarketplaceClient listings={combinedListings} user={user} />
+           <MarketplaceClient listings={combinedListings} user={user} isAdmin={profile?.is_admin === true} />
         )}
       </main>
     </div>

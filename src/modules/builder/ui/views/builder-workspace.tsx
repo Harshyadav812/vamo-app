@@ -119,7 +119,7 @@ export function BuilderWorkspace({
     <div className="flex items-center gap-3">
       <Link
         href="/projects"
-        className="text-lg font-extrabold tracking-tight"
+        className="text-lg font-extrabold italic tracking-tight"
       >
         &gt;&gt;&gt; vamo
       </Link>

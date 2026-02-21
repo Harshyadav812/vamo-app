@@ -22,7 +22,7 @@ export function AdminSidebar() {
   const NavigationList = () => (
     <nav className="flex-1 space-y-1.5 p-4">
       <div className="mb-6 px-2 flex items-center gap-2 text-xl font-bold tracking-tight">
-        <span className="text-xl font-bold tracking-tight">&gt;&gt;&gt; vamo admin</span>
+        <span className="text-xl font-extrabold tracking-tight">&gt;&gt;&gt; vamo admin</span>
       </div>
       
       {navItems.map((item) => {

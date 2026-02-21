@@ -132,7 +132,9 @@ export function BusinessPanel({
   const [editingDescription, setEditingDescription] = useState(false);
   const [description, setDescription] = useState(project.description ?? "");
   const [editingWhyBuilt, setEditingWhyBuilt] = useState(false);
-  const [whyBuilt, setWhyBuilt] = useState(project.why_built ?? "");
+  const [whyBuilt, setWhyBuilt] = useState(project.why_built || "");
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(project.name);
   const [urlInput, setUrlInput] = useState(project.url ?? "");
   const [githubInput, setGithubInput] = useState(project.github_url ?? "");
   const [linkedinInput, setLinkedinInput] = useState(project.linkedin_url ?? "");
@@ -305,7 +307,46 @@ function ProgressBar({ value }: { value: number }) {
           <div className="space-y-6 max-w-2xl">
             {/* Project Header */}
             <div>
-              <h2 className="text-2xl font-bold">{project.name}</h2>
+              {editingName ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        if (nameInput.trim() && nameInput !== project.name) {
+                          saveField("name", nameInput.trim(), "profile_updated");
+                        }
+                        setEditingName(false);
+                      } else if (e.key === "Escape") {
+                        setEditingName(false);
+                        setNameInput(project.name);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (nameInput.trim() && nameInput !== project.name) {
+                        saveField("name", nameInput.trim(), "profile_updated");
+                      }
+                      setEditingName(false);
+                    }}
+                    disabled={saving}
+                    className="h-10 text-2xl font-bold w-full max-w-[300px]"
+                  />
+                </div>
+              ) : (
+                <h2 
+                  className="text-2xl font-bold hover:bg-gray-50 rounded-md -ml-2 px-2 py-1 inline-block cursor-text transition-colors"
+                  onClick={() => {
+                    setNameInput(project.name);
+                    setEditingName(true);
+                  }}
+                  title="Click to edit project name"
+                >
+                  {project.name}
+                </h2>
+              )}
+              
               {editingDescription ? (
                 <div className="mt-3 space-y-2">
                   <Textarea
@@ -367,7 +408,7 @@ function ProgressBar({ value }: { value: number }) {
 
             {/* Valuation Range */}
             <section className="rounded-xl border p-4 space-y-3">
-              <h3 className="text-sm font-semibold flex items-center gap-2"><DollarSign className="h-4 w-4 text-emerald-500" /> Valuation Range</h3>
+              <h3 className="text-sm font-semibold flex items-center gap-2"><DollarSign className="h-4 w-4 text-gray-700" /> Valuation Range</h3>
               {latestOffer ? (
                 <div className="rounded-lg bg-emerald-50 p-4 text-center">
                   <p className="text-xs font-medium text-emerald-600 uppercase tracking-wider">
@@ -411,7 +452,7 @@ function ProgressBar({ value }: { value: number }) {
 
             {/* Why I Built This */}
             <section className="rounded-xl border p-4 space-y-2">
-              <h3 className="text-sm font-semibold flex items-center gap-2"><Lightbulb className="h-4 w-4 text-amber-500" /> Why I Built This</h3>
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Lightbulb className="h-4 w-4 text-amber-400" /> Why I Built This</h3>
               {editingWhyBuilt ? (
                 <div className="space-y-2">
                   <Textarea
@@ -455,7 +496,7 @@ function ProgressBar({ value }: { value: number }) {
 
             {/* Traction Signals */}
             <section className="rounded-xl border p-4 space-y-3">
-              <h3 className="text-sm font-semibold flex items-center gap-2"><Rocket className="h-4 w-4 text-blue-500" /> Traction Signals</h3>
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Rocket className="h-4 w-4 text-gray-700" /> Traction Signals</h3>
               {tractionEvents.length > 0 ? (
                 <div className="space-y-2">
                   {tractionEvents.map((event) => (
@@ -481,7 +522,7 @@ function ProgressBar({ value }: { value: number }) {
 
             {/* Activity Timeline */}
             <section className="rounded-xl border p-4 space-y-3">
-              <h3 className="text-sm font-semibold flex items-center gap-2"><ClipboardList className="h-4 w-4 text-gray-500" /> Activity Timeline</h3>
+              <h3 className="text-sm font-semibold flex items-center gap-2"><ClipboardList className="h-4 w-4 text-gray-700" /> Activity Timeline</h3>
               {activityEvents.length > 0 ? (
                 <div className="relative">
                   <div className="absolute left-3.5 top-2 bottom-2 w-px bg-gray-200" />

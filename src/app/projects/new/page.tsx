@@ -87,7 +87,7 @@ export default function NewProjectPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="flex items-center justify-between border-b bg-white px-6 py-4">
-        <Link href="/projects" className="text-xl font-bold tracking-tight">
+        <Link href="/projects" className="text-xl font-extrabold italic tracking-tight">
           &gt;&gt;&gt; vamo
         </Link>
       </header>

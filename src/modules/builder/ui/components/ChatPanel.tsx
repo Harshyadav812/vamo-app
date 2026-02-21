@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { formatDistanceToNowStrict, differenceInHours, format } from "date-fns";
 import { Sparkles, Bug, Wrench, Trophy, User, Zap, Users, Cherry, DollarSign, MessageSquare } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface ChatPanelProps {
   project: Project;
@@ -197,8 +198,64 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedTag, setSelectedTag] = useState<MessageTag | null>(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(project.name);
+  const [isSavingName, setIsSavingName] = useState(false);
+  const supabase = createClient();
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sync when project name changes externally
+  useEffect(() => {
+    setNameInput(project.name);
+  }, [project.name]);
+
+  async function handleSaveName() {
+    const newName = nameInput.trim();
+    if (!newName || newName === project.name) {
+      setIsEditingName(false);
+      setNameInput(project.name);
+      return;
+    }
+
+    setIsSavingName(true);
+    try {
+      // Optimistic UI Update via parent
+      if (onProjectUpdate) {
+        onProjectUpdate({ name: newName });
+      }
+      setIsEditingName(false);
+
+      const { error } = await supabase
+        .from("projects")
+        .update({ name: newName })
+        .eq("id", project.id)
+        .eq("owner_id", userId);
+
+      if (error) throw error;
+      
+      toast.success("Project name updated!");
+    } catch (err) {
+      toast.error("Failed to update project name");
+      // Revert optimistic update
+      if (onProjectUpdate) {
+        onProjectUpdate({ name: project.name });
+      }
+      setNameInput(project.name);
+    } finally {
+      setIsSavingName(false);
+    }
+  }
+
+  function handleNameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSaveName();
+    } else if (e.key === "Escape") {
+      setIsEditingName(false);
+      setNameInput(project.name);
+    }
+  }
 
   // Auto-scroll to bottom when new messages arrive (vibe pattern)
   useEffect(() => {
@@ -296,12 +353,28 @@ export function ChatPanel({
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-white">
-      {/* Project name badge */}
+      {/* Project name badge (Editable) */}
       <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
         <span className="text-xs font-medium text-muted-foreground">Chat</span>
-        <span className="max-w-[180px] truncate rounded-md border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-600">
-          {project.name}
-        </span>
+        {isEditingName ? (
+           <input
+             autoFocus
+             value={nameInput}
+             onChange={(e) => setNameInput(e.target.value)}
+             onBlur={handleSaveName}
+             onKeyDown={handleNameKeyDown}
+             disabled={isSavingName}
+             className="max-w-[180px] rounded-md border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-900 outline-none focus:border-black focus:ring-1 focus:ring-black"
+           />
+        ) : (
+           <button
+             onClick={() => setIsEditingName(true)}
+             className="max-w-[180px] truncate rounded-md border border-transparent hover:border-gray-200 bg-white hover:bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-600 transition-colors cursor-text"
+             title="Click to edit project name"
+           >
+             {project.name}
+           </button>
+        )}
       </div>
 
       {/* Suggestion chips when no messages */}

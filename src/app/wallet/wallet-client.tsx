@@ -206,8 +206,8 @@ export function WalletClient({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Event</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="text-right">Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -223,10 +223,10 @@ export function WalletClient({
                           <TableCell>
                             {EVENT_LABELS[reward.event_type] ?? reward.event_type}
                           </TableCell>
-                          <TableCell className="font-medium text-green-600 flex items-center gap-1">
-                            +{reward.amount} <span className="text-sm">🍍</span>
+                          <TableCell className={`font-medium flex items-center justify-end gap-1 ${reward.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {reward.amount > 0 ? '+' : ''}{reward.amount} <span className="text-sm">🍍</span>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="text-muted-foreground text-right w-[120px]">
                             {new Date(reward.created_at).toLocaleDateString()}
                           </TableCell>
                         </TableRow>
