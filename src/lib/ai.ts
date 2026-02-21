@@ -124,32 +124,32 @@ Respond with ONLY valid JSON, no markdown formatting.`;
 export async function getValuationOffer(
   projectName: string,
   projectDescription: string | null,
-  activityCount: number,
-  evidenceCount: number,
-  hasUrl: boolean
+  activitySummary: string
 ): Promise<{
-  lowRange: number;
-  highRange: number;
+  low_range: number;
+  high_range: number;
   reasoning: string;
-  signals: Record<string, unknown>;
+  signals: string[];
 }> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: { responseMimeType: "application/json" },
+  });
 
-  const prompt = `You are a startup valuation analyst. Based on the following project information, provide a valuation estimate.
+  const prompt = `You are a startup valuation engine. Based on the following project data and activity, provide a non-binding offer range and explanation.
 
 Project: ${projectName}
 Description: ${projectDescription || "No description provided"}
-Activity Count: ${activityCount} events logged
-Evidence Count: ${evidenceCount} evidence items
-Has Project URL: ${hasUrl ? "Yes" : "No"}
+Activity Summary:
+${activitySummary}
 
-Provide a JSON response with:
-- lowRange: minimum valuation in USD (integer)
-- highRange: maximum valuation in USD (integer)  
-- reasoning: brief explanation of the valuation (2-3 sentences)
-- signals: object with key traction signals and their assessment
-
-Respond with ONLY valid JSON, no markdown formatting.`;
+Expected response must be valid JSON matching this schema exactly:
+{
+  "low_range": number,
+  "high_range": number,
+  "reasoning": "string explaining the offer (2-3 sentences)",
+  "signals": ["list", "of", "signals"]
+}`;
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
@@ -157,18 +157,18 @@ Respond with ONLY valid JSON, no markdown formatting.`;
   try {
     const parsed = JSON.parse(text.replace(/```json\n?|\n?```/g, "").trim());
     return {
-      lowRange: parsed.lowRange ?? 1000,
-      highRange: parsed.highRange ?? 5000,
+      low_range: parsed.low_range ?? 1000,
+      high_range: parsed.high_range ?? 5000,
       reasoning: parsed.reasoning ?? "Valuation based on early-stage indicators.",
-      signals: parsed.signals ?? {},
+      signals: parsed.signals ?? [],
     };
   } catch {
     // Fallback if AI response isn't valid JSON
     return {
-      lowRange: 1000,
-      highRange: 5000,
-      reasoning: "Early-stage project with growth potential. Valuation based on activity level and evidence collected.",
-      signals: { activity: activityCount, evidence: evidenceCount, hasUrl },
+      low_range: 1000,
+      high_range: 5000,
+      reasoning: "Early-stage project with growth potential. Valuation based on activity level.",
+      signals: ["activity_metrics"],
     };
   }
 }

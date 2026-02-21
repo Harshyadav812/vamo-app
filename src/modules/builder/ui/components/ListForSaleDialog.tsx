@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 import type { Project, ActivityEvent } from "@/lib/types";
 import {
   Dialog,
@@ -68,6 +69,15 @@ export function ListForSaleDialog({
       });
       setStep(1); // Reset to start
       setDescription(project.description || "");
+
+      // Pre-fill asking price with high-end valuation from previous Vamo offers
+      const offerEvents = activityEvents.filter((e) => e.event_type === "offer_received");
+      if (offerEvents.length > 0) {
+        const latestOffer = offerEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+        if (latestOffer && latestOffer.metadata.offer_high) {
+          setAskingPrice(String(latestOffer.metadata.offer_high));
+        }
+      }
     }
   }, [open, project, activityEvents]);
 
@@ -103,7 +113,7 @@ export function ListForSaleDialog({
   async function handleSubmit() {
     setLoading(true);
     try {
-      const { error } = await supabase.from("listings").insert({
+      const { data: listing, error } = await supabase.from("listings").insert({
         project_id: project.id,
         owner_id: userId,
         title: project.name,
@@ -113,7 +123,7 @@ export function ListForSaleDialog({
         images: imageUrl ? [imageUrl] : [],
         metrics: metrics,
         allow_offers: true,
-      });
+      }).select().single();
 
       if (error) throw error;
 
@@ -121,6 +131,18 @@ export function ListForSaleDialog({
         .from("projects")
         .update({ listed: true })
         .eq("id", project.id);
+
+      // Log activity event
+      await supabase.from("activity_events").insert({
+        project_id: project.id,
+        user_id: userId,
+        event_type: "listing_created",
+        metadata: { asking_price: parseInt(askingPrice, 10) * 100 },
+      });
+
+      // Log analytics
+      console.log(`Analytics: Listing Published for project ${project.id} by user ${userId}`);
+      trackEvent("listing_created", { projectId: project.id, listingId: listing?.id || null });
 
       toast.success("Project listed successfully!", {
         description: "Your project is now live on the marketplace.",
@@ -318,8 +340,8 @@ export function ListForSaleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>List &quot;{project.name}&quot; for Sale</DialogTitle>
           <DialogDescription>
             Step {step} of 5: {
@@ -331,11 +353,11 @@ export function ListForSaleDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
+        <div className="py-4 overflow-y-auto flex-1 min-h-[300px]">
           {renderStepContent()}
         </div>
 
-        <DialogFooter className="flex justify-between sm:justify-between items-center w-full">
+        <DialogFooter className="flex justify-between sm:justify-between items-center w-full shrink-0">
            <Button variant="ghost" onClick={() => step > 1 ? setStep(step - 1) : onOpenChange(false)}>
              {step > 1 ? "Back" : "Cancel"}
            </Button>

@@ -51,37 +51,69 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch activity count for context
-    const { count: activityCount } = await supabase
+    // Load all activity_events for project
+    const { data: events } = await supabase
       .from("activity_events")
-      .select("*", { count: "exact", head: true })
-      .eq("project_id", projectId);
+      .select("event_type, created_at, metadata")
+      .eq("project_id", projectId)
+      .order('created_at', { ascending: false });
+
+    const activityEvents = events || [];
+
+    // Calculate metrics
+    const messageCount = activityEvents.filter(e => e.event_type === "chat_prompt").length;
+    const linksCount = activityEvents.filter(e => ["url_added", "link_github", "link_linkedin", "link_website"].includes(e.event_type)).length;
+    const tractionSignalCount = activityEvents.filter(e => ["feature_shipped", "customer_added", "revenue_logged"].includes(e.event_type)).length;
+
+    const activitySummary = JSON.stringify({
+      metrics: {
+        messageCount,
+        linksCount,
+        tractionSignalCount,
+        totalEvents: activityEvents.length
+      },
+      recentEvents: activityEvents.slice(0, 5) // Send a small subset to give context to the AI
+    });
 
     // Use AI to generate valuation
     const offer = await getValuationOffer(
       project.name,
       project.description,
-      activityCount ?? 0,
-      0, // evidence count placeholder
-      !!project.url
+      activitySummary
     );
 
-    // Store offer in database
-    await supabase.from("offers").insert({
+    // Expire old offers
+    await supabase
+      .from("offers")
+      .update({ expired: true })
+      .eq("project_id", projectId)
+      .eq("expired", false);
+
+    // Store new offer in database
+    const { data: newOffer, error: insertError } = await supabase.from("offers").insert({
       project_id: projectId,
-      buyer_id: null, // Vamo system offer
-      amount: Math.round((offer.lowRange + offer.highRange) / 2) * 100,
-      currency: "USD",
-      status: "pending",
-      notes: offer.reasoning,
+      user_id: user.id,
+      low_range: offer.low_range,
+      high_range: offer.high_range,
+      reasoning: offer.reasoning,
+      signals: offer.signals,
+    }).select().single();
+
+    if (insertError) {
+      console.error("Insert error:", insertError);
+      throw insertError;
+    }
+
+    // Log the event
+    await supabase.from("activity_events").insert({
+      project_id: projectId,
+      user_id: user.id,
+      event_type: "offer_received",
+      metadata: { low_range: offer.low_range, high_range: offer.high_range }
     });
 
     return NextResponse.json({
-      offer: {
-        low_range: offer.lowRange,
-        high_range: offer.highRange,
-        rationale: offer.reasoning,
-      },
+      offer: newOffer,
     });
   } catch (err) {
     console.error("Offer API error:", err);

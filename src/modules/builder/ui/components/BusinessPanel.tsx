@@ -2,11 +2,13 @@
 
 import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 import type { Project, Message, ActivityEvent, Offer } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { FullTimelineDialog } from "./FullTimelineDialog";
 import { toast } from "sonner";
 import {
   TrendingUp,
@@ -136,6 +138,7 @@ export function BusinessPanel({
   const [linkedinInput, setLinkedinInput] = useState(project.linkedin_url ?? "");
   const [saving, setSaving] = useState(false);
   const [runningValuation, setRunningValuation] = useState(false);
+  const [showFullTimeline, setShowFullTimeline] = useState(false);
 
   const supabase = createClient();
 
@@ -181,6 +184,13 @@ export function BusinessPanel({
           event_type: eventType,
           metadata: { field, value: value.substring(0, 100) },
         });
+
+        if (eventType === "url_added") {
+          let linkType = "website";
+          if (field === "github_url") linkType = "github";
+          if (field === "linkedin_url") linkType = "linkedin";
+          trackEvent("link_added", { projectId: project.id, linkType });
+        }
 
         const rewardRes = await fetch("/api/rewards", {
           method: "POST",
@@ -488,6 +498,19 @@ function ProgressBar({ value }: { value: number }) {
                       </div>
                     ))}
                   </div>
+                  
+                  {activityEvents.length > 10 && (
+                    <div className="pt-4 ml-10">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full sm:w-auto"
+                        onClick={() => setShowFullTimeline(true)}
+                      >
+                        View All Activity ({activityEvents.length})
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground py-2">
@@ -570,6 +593,13 @@ function ProgressBar({ value }: { value: number }) {
           </div>
         )}
       </div>
+
+      {/* Full Timeline Modal */}
+      <FullTimelineDialog
+        open={showFullTimeline}
+        onOpenChange={setShowFullTimeline}
+        activityEvents={activityEvents}
+      />
     </div>
   );
 }

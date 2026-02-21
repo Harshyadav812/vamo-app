@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AnalyticsTracker } from "@/components/AnalyticsTracker";
+import { Suspense } from "react";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,6 +26,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
         <TooltipProvider>
+          <Suspense fallback={null}>
+            <AnalyticsTracker />
+          </Suspense>
           {children}
           <Toaster position="bottom-right" richColors />
         </TooltipProvider>

@@ -60,14 +60,7 @@ export function BuilderWorkspace({
 
   useEffect(() => {
     setIsMounted(true);
-    
-    // Polling every 5 seconds to keep business panel fresh
-    const intervalId = setInterval(() => {
-      router.refresh();
-    }, 5000);
-
-    return () => clearInterval(intervalId);
-  }, [router]);
+  }, []);
 
   function handlePineappleEarned(amount: number) {
     setPineappleBalance((prev) => prev + amount);
@@ -251,6 +244,7 @@ export function BuilderWorkspace({
           onOpenChange={setShowOfferDialog}
           project={currentProject}
           userId={userId}
+          onAcceptOffer={() => setShowListDialog(true)}
         />
       </div>
     );
@@ -302,6 +296,7 @@ export function BuilderWorkspace({
           onOpenChange={setShowOfferDialog}
           project={currentProject}
           userId={userId}
+          onAcceptOffer={() => setShowListDialog(true)}
         />
       </div>
     );
@@ -355,6 +350,7 @@ export function BuilderWorkspace({
         onOpenChange={setShowOfferDialog}
         project={currentProject}
         userId={userId}
+        onAcceptOffer={() => setShowListDialog(true)}
       />
     </div>
   );

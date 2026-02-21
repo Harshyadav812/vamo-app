@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { Project, Message, MessageTag } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -258,11 +259,15 @@ export function ChatPanel({
 
       if (data.pineapplesEarned && data.pineapplesEarned > 0) {
         onPineappleEarned(data.pineapplesEarned);
+        trackEvent("reward_earned", { projectId: project.id, amount: data.pineapplesEarned, eventType: "chat_prompt" });
         toast.success(`+${data.pineapplesEarned} pineapples`, {
           description: "Pineapples earned for your activity!",
           icon: "🍍",
         });
       }
+
+      // Track prompt sent event
+      trackEvent("prompt_sent", { projectId: project.id, messageId: data.assistantMessage?.id || "unknown" });
 
       // Update progress score
       if (data.progressDelta && data.progressDelta > 0 && onProjectUpdate) {

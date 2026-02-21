@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/lib/analytics";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +78,10 @@ export function WalletClient({
       setCurrentBalance(data.newBalance);
       setRedeemAmount("50");
       setIsRedeemOpen(false);
+      
+      // Track analytics event
+      trackEvent("reward_redeemed", { amount, rewardType });
+
       toast.success("Redemption submitted! You'll receive your reward within 48 hours.", {
         icon: "🍍",
       });

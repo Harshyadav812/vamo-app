@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 import { createProjectSchema } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,9 @@ export default function NewProjectPage() {
       event_type: "project_created",
       metadata: { name: project.name },
     });
+
+    // Track analytics event
+    trackEvent("project_created", { projectId: project.id });
 
     router.push(`/builder/${project.id}`);
   }
