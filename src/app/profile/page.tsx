@@ -23,6 +23,7 @@ export default function ProfilePage() {
   // Form states
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [email, setEmail] = useState("");
   
   // Password states
@@ -109,6 +110,39 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingAvatar(true);
+      if (!event.target.files || event.target.files.length === 0) {
+        throw new Error("You must select an image to upload.");
+      }
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from("profile_avatar")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("profile_avatar")
+        .getPublicUrl(filePath);
+
+      setAvatarUrl(publicUrl);
+      toast.success("Avatar uploaded! Click 'Save Identity' to apply.");
+    } catch (error: any) {
+      toast.error(error.message || "Error uploading avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const updatePassword = async () => {
     if (!newPassword || !confirmPassword) return;
     if (newPassword !== confirmPassword) {
@@ -178,14 +212,38 @@ export default function ProfilePage() {
                   {displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div className="space-y-1 flex-1">
-                <Label className="text-xs text-zinc-500">Avatar URL</Label>
-                <Input 
-                  value={avatarUrl} 
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="bg-transparent border-t-0 border-x-0 border-b border-white/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-teal-500 transition-colors h-8 placeholder:text-zinc-700"
-                />
+              <div className="space-y-2 flex-1">
+                <Label className="text-xs text-zinc-500">Avatar Image</Label>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Input 
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      disabled={uploadingAvatar}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      disabled={uploadingAvatar}
+                      className="bg-transparent border-white/10 text-zinc-300 hover:text-white hover:bg-white/5"
+                    >
+                      {uploadingAvatar ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      {uploadingAvatar ? "Uploading..." : "Choose File"}
+                    </Button>
+                  </div>
+                  {avatarUrl && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      onClick={() => setAvatarUrl("")}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-9 px-3"
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
