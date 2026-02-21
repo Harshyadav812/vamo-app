@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { chatMessageSchema } from "@/lib/validators";
-import { getChatResponse } from "@/lib/ai";
+import { getBuilderChatResponse } from "@/lib/ai";
 import { REWARD_AMOUNTS, generateIdempotencyKey } from "@/lib/rewards";
 
 export async function POST(request: Request) {
@@ -92,50 +92,16 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join("\n");
 
-    // Auto-classify tag if not provided
-    let finalTag = tag;
-    if (!finalTag || finalTag === "general") {
-      const classificationPrompt = `
-        Classify the user's message into one of these tags: "feature", "bug", "improvement", "milestone", "general".
-        - "milestone": Updates about revenue, user counts, launches, or major achievements.
-        - "feature": Implementing new functionality.
-        - "bug": Fixing issues.
-        - "improvement": Enhancing existing features.
-        - "general": General discussion.
-        
-        User Message: "${message}"
-        
-        Return ONLY the tag name.
-      `;
-      try {
-        const result = await getChatResponse("", classificationPrompt, []);
-        const classified = result.trim().toLowerCase();
-        if (["feature", "bug", "improvement", "milestone", "general"].includes(classified)) {
-          finalTag = classified as any;
-        }
-      } catch (e) {
-        console.error("Classification failed", e);
-      }
-    }
-
-    // Get AI response with STRICT formatting rules
-    const systemPrompt = `
-      You are Vamo, an AI co-founder for startups.
-      Context:
-      ${projectContext}
-
-      Rules:
-      1. Reply in PLAIN TEXT only. No markdown (no bold, no italics, no bullet points).
-      2. No hashtags.
-      3. ABSOLUTELY NO EMOJIS.
-      4. Be concise, encouraging, and helpful.
-    `;
-
-    let aiResponse = await getChatResponse(
-      systemPrompt,
+    // Get AI response containing structured JSON
+    const aiPayload = await getBuilderChatResponse(
+      projectContext,
       message,
       chatHistory
     );
+
+    let aiResponse = aiPayload.reply;
+    const finalIntent = aiPayload.intent;
+    const businessUpdate = aiPayload.business_update;
 
     // POST-PROCESSING: Forcefully strip Markdown and Emojis
     // 1. Remove Markdown (*, **, _, ~, `, >)
@@ -150,31 +116,64 @@ export async function POST(request: Request) {
     // 4. Clean up double spaces created by removal
     aiResponse = aiResponse.replace(/\s+/g, " ").trim();
 
-    // Calculate pineapple reward
-    const rewardAmount = REWARD_AMOUNTS.chat_prompt ?? 5;
-    const idempotencyKey = generateIdempotencyKey(
-      user.id,
-      projectId,
-      "chat_prompt",
-      userMsg?.id ?? Date.now().toString()
-    );
-
-    // If tag is 'milestone', generate a concise summary
-    let summary: string | null = null;
-    if (finalTag === "milestone") {
-      try {
-        const summaryPrompt = `
-          The user just shared a startup milestone: "${message}".
-          Rewrite this into a concise, professional notification title (max 5 words).
-          Example: "Reached $10k MRR", "Launched Beta", "First 100 Users".
-          Do not use quotes.
-        `;
-        const summaryResponse = await getChatResponse("", summaryPrompt, []);
-        summary = summaryResponse.trim();
-      } catch (e) {
-        console.error("Failed to generate summary", e);
+    // Update Progress Score if needed
+    if (businessUpdate.progress_delta > 0) {
+      const newScore = Math.min(100, project.progress_score + businessUpdate.progress_delta);
+      if (newScore !== project.progress_score) {
+        await supabase
+          .from("projects")
+          .update({ progress_score: newScore })
+          .eq("id", projectId);
       }
     }
+
+    // Check Rate Limit (60 prompts per project per hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: recentPrompts } = await supabase
+      .from("reward_ledger")
+      .select("*", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("event_type", "chat_prompt")
+      .gte("created_at", oneHourAgo);
+
+    const isRateLimited = (recentPrompts ?? 0) >= 60;
+
+    // Calculate pineapple rewards
+    const rewardItems: Array<{ event_type: string; amount: number; idempotency_key: string }> = [];
+
+    rewardItems.push({
+      event_type: "chat_prompt",
+      amount: isRateLimited ? 0 : (REWARD_AMOUNTS.chat_prompt || 1),
+      idempotency_key: `${userMsg?.id}-prompt-reward`,
+    });
+
+    if (["feature", "customer", "revenue"].includes(finalIntent)) {
+      rewardItems.push({
+        event_type: `chat_${finalIntent}`, // chat_feature, chat_customer, chat_revenue
+        amount: isRateLimited ? 0 : (REWARD_AMOUNTS[`chat_${finalIntent}`] || 1),
+        idempotency_key: `${userMsg?.id}-${finalIntent}-bonus`,
+      });
+    }
+
+    const eventTypeMap: Record<string, string> = {
+      feature: "feature_shipped",
+      customer: "customer_added",
+      revenue: "revenue_logged",
+    };
+
+    if (businessUpdate.traction_signal && ["feature", "customer", "revenue"].includes(finalIntent)) {
+      const tractionEventType = eventTypeMap[finalIntent];
+      rewardItems.push({
+        event_type: tractionEventType,
+        amount: isRateLimited ? 0 : (REWARD_AMOUNTS[tractionEventType] || 3),
+        idempotency_key: `${userMsg?.id}-${tractionEventType}`,
+      });
+    }
+
+    const totalRewardAmount = rewardItems.reduce((acc, item) => acc + item.amount, 0);
+
+    // Save the traction signal as the 'summary'
+    const summary = businessUpdate.traction_signal || null;
 
     // Insert AI response message
     // ... rest of the code
@@ -184,27 +183,36 @@ export async function POST(request: Request) {
         project_id: projectId,
         role: "assistant",
         content: aiResponse,
-        summary: summary, // Persist the summary
-        tag: finalTag ?? "general",
-        pineapples_earned: rewardAmount,
+        summary: summary, // Persist the traction signal summary
+        tag: finalIntent ?? "general",
+        pineapples_earned: totalRewardAmount,
       })
       .select()
       .single();
 
     // Award pineapples (idempotent)
     let pineapplesEarned = 0;
-    const { error: rewardError } = await supabase
-      .from("reward_ledger")
-      .insert({
-        user_id: user.id,
-        project_id: projectId,
-        event_type: "chat_prompt",
-        amount: rewardAmount,
-        idempotency_key: idempotencyKey,
-      });
+    
+    // Attempt inserting all non-zero rewards
+    for (const item of rewardItems) {
+      if (item.amount > 0) {
+        const { error: rewardError } = await supabase
+          .from("reward_ledger")
+          .insert({
+            user_id: user.id,
+            project_id: projectId,
+            event_type: item.event_type,
+            amount: item.amount,
+            idempotency_key: item.idempotency_key,
+          });
 
-    if (!rewardError) {
-      pineapplesEarned = rewardAmount;
+        if (!rewardError) {
+          pineapplesEarned += item.amount;
+        }
+      }
+    }
+
+    if (pineapplesEarned > 0) {
       // Update balance directly
       const { data: currentProfile } = await supabase
         .from("profiles")
@@ -216,23 +224,34 @@ export async function POST(request: Request) {
         await supabase
           .from("profiles")
           .update({
-            pineapple_balance: currentProfile.pineapple_balance + rewardAmount,
+            pineapple_balance: currentProfile.pineapple_balance + pineapplesEarned,
           })
           .eq("id", user.id);
       }
     }
 
-    // Log activity event
+    // Log activity event for the chat prompt itself
     await supabase.from("activity_events").insert({
       project_id: projectId,
       user_id: user.id,
       event_type: "chat_prompt",
-      metadata: { tag: tag ?? "general", message_preview: message.substring(0, 100) },
+      metadata: { tag: finalIntent ?? "general", message_preview: message.substring(0, 100) },
     });
+
+    // Log traction signal if present
+    if (businessUpdate.traction_signal && ["feature", "customer", "revenue"].includes(finalIntent)) {
+      await supabase.from("activity_events").insert({
+        project_id: projectId,
+        user_id: user.id,
+        event_type: eventTypeMap[finalIntent],
+        metadata: { description: businessUpdate.traction_signal },
+      });
+    }
 
     return NextResponse.json({
       assistantMessage: assistantMsg,
       pineapplesEarned,
+      progressDelta: businessUpdate.progress_delta,
     });
   } catch (err) {
     console.error("Chat API error:", err);

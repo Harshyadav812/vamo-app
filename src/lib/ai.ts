@@ -43,6 +43,84 @@ Guidelines:
   return response.text();
 }
 
+export async function getBuilderChatResponse(
+  projectContext: string,
+  userMessage: string,
+  conversationHistory: Array<{ role: "user" | "model"; content: string }>
+): Promise<{
+  reply: string;
+  intent: string;
+  business_update: {
+    progress_delta: number;
+    traction_signal: string | null;
+    valuation_adjustment: "up" | "down" | "none";
+  };
+}> {
+  const systemPrompt = `You are Vamo, an AI co-pilot for startup founders.
+${projectContext}
+
+Your job:
+1. Respond helpfully to their update or question (keep it concise, 2-3 sentences max).
+2. Extract the intent of their message. Classify as one of: feature, customer, revenue, ask, general.
+3. If the update implies progress (shipped something, talked to users, made revenue), generate an updated business analysis.
+4. Return your response as JSON:
+{
+  "reply": "Your response text",
+  "intent": "feature|customer|revenue|ask|general",
+  "business_update": {
+    "progress_delta": 0-5,
+    "traction_signal": "string or null",
+    "valuation_adjustment": "up|down|none"
+  }
+}
+
+Respond with ONLY valid JSON, no markdown formatting.`;
+
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.5-flash",
+    systemInstruction: systemPrompt,
+    generationConfig: {
+      responseMimeType: "application/json",
+    }
+  });
+
+  const chatHistory = conversationHistory.map((msg) => ({
+    role: msg.role as "user" | "model",
+    parts: [{ text: msg.content }],
+  }));
+
+  const chat = model.startChat({
+    history: chatHistory,
+  });
+
+  const result = await chat.sendMessage(userMessage);
+  const text = result.response.text();
+
+  try {
+    const parsed = JSON.parse(text);
+    return {
+      reply: parsed.reply || "I couldn't process that right now. Your update has been saved.",
+      intent: parsed.intent || "general",
+      business_update: {
+        progress_delta: parsed.business_update?.progress_delta || 0,
+        traction_signal: parsed.business_update?.traction_signal || null,
+        valuation_adjustment: parsed.business_update?.valuation_adjustment || "none",
+      },
+    };
+  } catch (err) {
+    console.error("Failed to parse AI JSON response", err);
+    return {
+      reply: "I couldn't process that right now. Your update has been saved.",
+      intent: "general",
+      business_update: {
+        progress_delta: 0,
+        traction_signal: null,
+        valuation_adjustment: "none",
+      },
+    };
+  }
+}
+
 export async function getValuationOffer(
   projectName: string,
   projectDescription: string | null,

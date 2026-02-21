@@ -52,57 +52,77 @@ export async function POST(request: Request) {
       .eq("user_id", userId)
       .gte("created_at", oneHourAgo);
 
-    if ((rewardCount ?? 0) >= MAX_REWARDS_PER_HOUR) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "RATE_LIMITED",
-            message: "Too many rewards earned recently. Try again later.",
-          },
-        },
-        { status: 429 }
-      );
+    const isRateLimited = (rewardCount ?? 0) >= MAX_REWARDS_PER_HOUR;
+    let amount = REWARD_AMOUNTS[eventType] ?? 5; // Use default if type not in map
+
+    if (isRateLimited) {
+      amount = 0; // Drop amount to 0 if rate limited
     }
 
-    // Determine amount
-    const amount = REWARD_AMOUNTS[eventType] ?? 5;
+    if (amount > 0) {
+      // Insert reward (idempotent via unique key)
+      const { error: insertError } = await supabase
+        .from("reward_ledger")
+        .insert({
+          user_id: userId,
+          project_id: projectId,
+          event_type: eventType,
+          amount,
+          idempotency_key: idempotencyKey,
+        });
 
-    // Insert reward (idempotent via unique key)
-    const { error: insertError } = await supabase
-      .from("reward_ledger")
-      .insert({
-        user_id: userId,
-        project_id: projectId,
-        event_type: eventType,
-        amount,
-        idempotency_key: idempotencyKey,
-      });
-
-    if (insertError) {
-      // Duplicate idempotency key = already awarded
-      if (insertError.code === "23505") {
-        return NextResponse.json({ amount: 0, message: "Already awarded" });
+      if (insertError) {
+        // Duplicate idempotency key = already awarded
+        if (insertError.code === "23505") {
+          // fetch current profile balance to return
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("pineapple_balance")
+            .eq("id", userId)
+            .single();
+          return NextResponse.json({ rewarded: false, amount: 0, newBalance: profile?.pineapple_balance ?? 0, message: "Already awarded" });
+        }
+        throw insertError;
       }
-      throw insertError;
     }
 
+    let newBalance = 0;
     // Update pineapple balance (fetch current, then update)
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("pineapple_balance")
-      .eq("id", userId)
-      .single();
-
-    if (profile) {
-      await supabase
+    if (amount > 0) {
+      const { data: profile } = await supabase
         .from("profiles")
-        .update({
-          pineapple_balance: profile.pineapple_balance + amount,
-        })
-        .eq("id", userId);
+        .select("pineapple_balance")
+        .eq("id", userId)
+        .single();
+        
+      if (profile) {
+        newBalance = profile.pineapple_balance + amount;
+        await supabase
+          .from("profiles")
+          .update({
+            pineapple_balance: newBalance,
+          })
+          .eq("id", userId);
+      }
+      
+      // Log activity event
+      await supabase.from("activity_events").insert({
+        project_id: projectId,
+        user_id: userId,
+        event_type: "reward_earned",
+        metadata: { event: eventType, amount },
+      });
+    } else {
+      // Fetch balance anyway for the return payload
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("pineapple_balance")
+        .eq("id", userId)
+        .single();
+      newBalance = profile?.pineapple_balance ?? 0;
     }
 
-    return NextResponse.json({ amount, message: "Reward granted" });
+    return NextResponse.json({ rewarded: true, amount, newBalance, message: amount > 0 ? "Reward granted" : "Rate limited or 0 amount" });
   } catch (err) {
     console.error("Rewards API error:", err);
     return NextResponse.json(

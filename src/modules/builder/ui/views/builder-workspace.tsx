@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Project, Profile, Message, ActivityEvent, Offer } from "@/lib/types";
 import { ChatPanel } from "@/modules/builder/ui/components/ChatPanel";
 import { UIPreview } from "@/modules/builder/ui/components/UIPreview";
@@ -43,13 +44,30 @@ export function BuilderWorkspace({
   const [showListDialog, setShowListDialog] = useState(false);
   const [showOfferDialog, setShowOfferDialog] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
 
   const isDesktop = useMediaQuery("(min-width: 1280px)");
   const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1279px)");
 
+  // Sync props to local state if server re-fetches
+  useEffect(() => {
+    setCurrentProject(project);
+  }, [project]);
+
+  useEffect(() => {
+    setMessages(initialMessages);
+  }, [initialMessages]);
+
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    
+    // Polling every 5 seconds to keep business panel fresh
+    const intervalId = setInterval(() => {
+      router.refresh();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [router]);
 
   function handlePineappleEarned(amount: number) {
     setPineappleBalance((prev) => prev + amount);
@@ -138,6 +156,7 @@ export function BuilderWorkspace({
       userId={userId}
       onNewMessage={handleNewMessage}
       onPineappleEarned={handlePineappleEarned}
+      onProjectUpdate={handleProjectUpdate}
     />
   );
 

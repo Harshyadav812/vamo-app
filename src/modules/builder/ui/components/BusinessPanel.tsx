@@ -38,36 +38,27 @@ const SCORE_WEIGHTS: Record<string, number> = {
   url: 10,
   why_built: 10,
   screenshot_url: 5,
-  milestone: 15, // Points per milestone
 };
 
-function calculateProgressScore(project: Project, milestoneCount: number): number {
-  let score = 0;
-  if (project.description) score += SCORE_WEIGHTS.description;
-  if (project.url) score += SCORE_WEIGHTS.url;
-  if (project.why_built) score += SCORE_WEIGHTS.why_built;
-  if (project.screenshot_url) score += SCORE_WEIGHTS.screenshot_url;
-  
-  // Add score for milestones (capped)
-  score += Math.min(milestoneCount * SCORE_WEIGHTS.milestone, 65);
-
-  return Math.min(score, 100);
-}
-
 function getStageLabel(score: number): string {
-  if (score <= 20) return "Getting Started";
-  if (score <= 40) return "Early Stage";
-  if (score <= 60) return "Building Momentum";
-  if (score <= 80) return "Growth Phase";
-  return "Mature";
+  if (score <= 25) return "Early Stage";
+  if (score <= 50) return "Building";
+  if (score <= 75) return "Traction";
+  return "Growth";
 }
 
 function getStageColor(score: number): string {
-  if (score <= 20) return "text-gray-500";
-  if (score <= 40) return "text-orange-500";
-  if (score <= 60) return "text-yellow-500";
-  if (score <= 80) return "text-blue-500";
-  return "text-emerald-500";
+  if (score <= 25) return "text-red-500";
+  if (score <= 50) return "text-yellow-500";
+  if (score <= 75) return "text-green-500";
+  return "text-blue-500";
+}
+
+function getProgressBg(score: number): string {
+  if (score <= 25) return "bg-red-500";
+  if (score <= 50) return "bg-yellow-500";
+  if (score <= 75) return "bg-green-500";
+  return "bg-blue-500";
 }
 
 function timeAgo(dateStr: string): string {
@@ -93,6 +84,9 @@ const EVENT_LABELS: Record<string, string> = {
   listing_created: "Listed for sale",
   offer_received: "Offer received",
   profile_updated: "Profile updated",
+  feature_shipped: "Feature shipped",
+  customer_added: "Customer added",
+  revenue_logged: "Revenue logged",
 };
 
 const EVENT_ICONS: Record<string, ReactNode> = {
@@ -106,6 +100,9 @@ const EVENT_ICONS: Record<string, ReactNode> = {
   listing_created: <Store className="h-3.5 w-3.5" />,
   offer_received: <DollarSign className="h-3.5 w-3.5" />,
   profile_updated: <User className="h-3.5 w-3.5" />,
+  feature_shipped: <Rocket className="h-3.5 w-3.5" />,
+  customer_added: <Users className="h-3.5 w-3.5" />,
+  revenue_logged: <DollarSign className="h-3.5 w-3.5" />,
 };
 
 interface BusinessPanelProps {
@@ -142,34 +139,14 @@ export function BusinessPanel({
 
   const supabase = createClient();
 
-  const milestoneMessages = useMemo(
-    () => messages.filter((m) => m.summary).slice(-5).reverse(),
-    [messages]
+  const tractionEvents = useMemo(
+    () => activityEvents
+      .filter((e) => ["feature_shipped", "customer_added", "revenue_logged"].includes(e.event_type))
+      .slice(0, 10),
+    [activityEvents]
   );
 
-  const totalMilestones = useMemo(
-    () => messages.filter(m => m.tag === 'milestone').length,
-    [messages]
-  );
-
-  const progressScore = calculateProgressScore(project, totalMilestones);
-
-  // Sync progress score with DB if there's a mismatch
-  useEffect(() => {
-    if (progressScore !== project.progress_score) {
-      const syncScore = async () => {
-        const { error } = await supabase
-          .from("projects")
-          .update({ progress_score: progressScore })
-          .eq("id", project.id);
-        
-        if (!error) {
-          onProjectUpdate({ progress_score: progressScore });
-        }
-      };
-      syncScore();
-    }
-  }, [progressScore, project.progress_score, project.id, onProjectUpdate, supabase]);
+  const progressScore = project.progress_score;
 
   async function saveField(field: string, value: string, eventType: string) {
     setSaving(true);
@@ -185,21 +162,19 @@ export function BusinessPanel({
       const previousValue = project[field as keyof Project];
       onProjectUpdate({ [field]: value } as Partial<Project>);
 
-      // Recalculate and persist progress score
-      const updatedProject = { ...project, [field]: value };
-      const currentMilestoneCount = messages.filter(m => m.tag === 'milestone').length;
-      const newScore = calculateProgressScore(updatedProject, currentMilestoneCount);
-      
-      if (newScore !== project.progress_score) {
-        await supabase
-          .from("projects")
-          .update({ progress_score: newScore })
-          .eq("id", project.id);
-        onProjectUpdate({ progress_score: newScore });
-      }
-
-      // Only log activity + reward on FIRST save (field was previously empty)
+      // Only log activity, reward, and progress on FIRST save (field was previously empty)
       if (!previousValue) {
+        // Increment progress score additively
+        const weight = SCORE_WEIGHTS[field] || 0;
+        if (weight > 0) {
+           const newScore = Math.min(100, project.progress_score + weight);
+           await supabase
+             .from("projects")
+             .update({ progress_score: newScore })
+             .eq("id", project.id);
+           onProjectUpdate({ progress_score: newScore });
+        }
+
         await supabase.from("activity_events").insert({
           project_id: project.id,
           user_id: userId,
@@ -366,10 +341,12 @@ function ProgressBar({ value }: { value: number }) {
             {/* Progress Score */}
             <section className="rounded-xl border p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4 text-emerald-500" /> Progress Score</h3>
+                <h3 className="text-sm font-semibold flex items-center gap-2"><TrendingUp className={`h-4 w-4 ${getStageColor(progressScore)}`} /> Progress Score</h3>
                 <span className="text-lg font-bold">{progressScore}</span>
               </div>
-              <Progress value={progressScore} className="h-2" />
+              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                <div className={`h-full transition-all duration-500 ease-out ${getProgressBg(progressScore)}`} style={{ width: `${progressScore}%` }} />
+              </div>
               <div className="flex items-center justify-between">
                 <span className={`text-sm font-medium ${getStageColor(progressScore)}`}>
                   {getStageLabel(progressScore)}
@@ -386,9 +363,15 @@ function ProgressBar({ value }: { value: number }) {
                   <p className="text-xs font-medium text-emerald-600 uppercase tracking-wider">
                     Estimated Valuation
                   </p>
-                  <p className="mt-1 text-2xl font-bold text-emerald-800">
-                    ${latestOffer.low_range.toLocaleString()} &ndash; ${latestOffer.high_range.toLocaleString()}
-                  </p>
+                  {latestOffer.low_range === 0 && latestOffer.high_range === 0 ? (
+                    <div className="mt-2 inline-flex items-center rounded-md border border-emerald-200 bg-emerald-100/50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                      Not yet estimated
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-2xl font-bold text-emerald-800">
+                      ${latestOffer.low_range.toLocaleString()} &ndash; ${latestOffer.high_range.toLocaleString()}
+                    </p>
+                  )}
                   <p className="mt-2 text-xs text-muted-foreground">
                     Last updated {timeAgo(latestOffer.created_at)}
                   </p>
@@ -427,21 +410,27 @@ function ProgressBar({ value }: { value: number }) {
                     placeholder="What's the story behind your project?"
                     rows={4}
                     className="text-sm"
+                    maxLength={1000}
                   />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      disabled={saving}
-                      onClick={() => {
-                        saveField("why_built", whyBuilt, "profile_updated");
-                        setEditingWhyBuilt(false);
-                      }}
-                    >
-                      Save
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditingWhyBuilt(false)}>
-                      Cancel
-                    </Button>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">
+                      {whyBuilt.length} / 1000
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        disabled={saving}
+                        onClick={() => {
+                          saveField("why_built", whyBuilt, "profile_updated");
+                          setEditingWhyBuilt(false);
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingWhyBuilt(false)}>
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -457,17 +446,17 @@ function ProgressBar({ value }: { value: number }) {
             {/* Traction Signals */}
             <section className="rounded-xl border p-4 space-y-3">
               <h3 className="text-sm font-semibold flex items-center gap-2"><Rocket className="h-4 w-4 text-blue-500" /> Traction Signals</h3>
-              {milestoneMessages.length > 0 ? (
+              {tractionEvents.length > 0 ? (
                 <div className="space-y-2">
-                  {milestoneMessages.map((msg) => (
-                    <div key={msg.id} className="flex items-center gap-3 rounded-lg bg-gray-50 p-2.5">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  {tractionEvents.map((event) => (
+                    <div key={event.id} className="flex items-center gap-3 rounded-lg bg-gray-50 p-2.5">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-white text-gray-600">
+                        {EVENT_ICONS[event.event_type] || <Check className="h-3.5 w-3.5 text-emerald-600" />}
                       </div>
                       <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium truncate">{msg.summary || msg.content}</p>
+                        <p className="text-sm font-medium truncate">{String(event.metadata.description || event.event_type)}</p>
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
-                          {timeAgo(msg.created_at)}
+                          {timeAgo(event.created_at)}
                         </span>
                       </div>
                     </div>
@@ -475,11 +464,7 @@ function ProgressBar({ value }: { value: number }) {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground py-2">
-                  No milestones yet. Share achievements in chat with the{" "}
-                  <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium">
-                    <Trophy className="h-3 w-3" /> Milestone
-                  </span>{" "}
-                  tag to see traction signals here.
+                  Start logging progress in the chat to see traction signals here.
                 </p>
               )}
             </section>
@@ -491,9 +476,9 @@ function ProgressBar({ value }: { value: number }) {
                 <div className="relative">
                   <div className="absolute left-3.5 top-2 bottom-2 w-px bg-gray-200" />
                   <div className="space-y-3">
-                    {activityEvents.map((event) => (
+                    {activityEvents.slice(0, 10).map((event) => (
                       <div key={event.id} className="flex items-start gap-3 relative">
-                        <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white border text-sm">
+                        <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white border text-sm text-gray-600">
                           {EVENT_ICONS[event.event_type] || <Pin className="h-3.5 w-3.5" />}
                         </div>
                         <div className="flex-1 min-w-0 pt-0.5">

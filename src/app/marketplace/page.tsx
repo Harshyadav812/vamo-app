@@ -13,6 +13,12 @@ export default async function MarketplacePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let profile = null;
+  if (user) {
+    const { data } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
+    profile = data;
+  }
+
   // Fetch active listings with project info
   const { data: listings } = await supabase
     .from("listings")
@@ -24,7 +30,10 @@ export default async function MarketplacePage() {
       status,
       created_at,
       project_id,
-      owner_id
+      owner_id,
+      images,
+      metrics,
+      allow_offers
     `)
     .eq("status", "active")
     .order("created_at", { ascending: false });
@@ -47,17 +56,19 @@ export default async function MarketplacePage() {
   // Combine listing with project
   const combinedListings = (listings ?? []).map((l) => {
     const project = projectMap.get(l.project_id) as any;
+    // We now have accurate database metrics and images, no need to polyfill here
+    // But we still inject project.progress_score into metrics if progress isn't defined yet
+    const metrics = l.metrics || { prompts: 0, traction: 0 };
+    if (typeof metrics.progress !== 'number') {
+       metrics.progress = project?.progress_score || 0;
+    }
+
     return {
       ...l,
       project,
-      // Polyfill missing columns until migration is run
-      metrics: {
-        progress: project?.progress_score || 0,
-        prompts: 0,
-        traction: 0
-      }, 
-      images: [],
-      allow_offers: true,
+      metrics,
+      images: l.images || [],
+      allow_offers: l.allow_offers ?? true,
     };
   }).filter(l => l.project); // Ensure project exists
 
@@ -76,9 +87,9 @@ export default async function MarketplacePage() {
                 </Button>
               </Link>
               <Link href="/profile">
-                <Button variant="ghost" size="sm">
-                  Profile
-                </Button>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-sm font-medium text-white hover:bg-zinc-700 transition-colors">
+                  {(profile?.display_name || user.email)?.[0]?.toUpperCase()}
+                </div>
               </Link>
             </>
           ) : (

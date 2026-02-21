@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { formatDistanceToNowStrict, differenceInHours, format } from "date-fns";
-import { Sparkles, Bug, Wrench, Trophy, User, Zap, Users, Cherry } from "lucide-react";
+import { Sparkles, Bug, Wrench, Trophy, User, Zap, Users, Cherry, DollarSign, MessageSquare } from "lucide-react";
 
 interface ChatPanelProps {
   project: Project;
@@ -15,15 +15,16 @@ interface ChatPanelProps {
   userId: string;
   onNewMessage: (message: Message) => void;
   onPineappleEarned: (amount: number) => void;
+  onProjectUpdate?: (updates: Partial<Project>) => void;
 }
 
 // ── Tag config ────────────────────────────────────────────────────────────────
 
 const TAG_OPTIONS: { value: MessageTag; label: string; icon: React.ElementType }[] = [
   { value: "feature", label: "Feature", icon: Sparkles },
-  { value: "bug", label: "Bug", icon: Bug },
-  { value: "improvement", label: "Improve", icon: Wrench },
-  { value: "milestone", label: "Milestone", icon: Trophy },
+  { value: "customer", label: "Customer", icon: Users },
+  { value: "revenue", label: "Revenue", icon: DollarSign },
+  { value: "ask", label: "Ask", icon: MessageSquare },
 ];
 
 const TAG_STYLES: Record<
@@ -33,6 +34,18 @@ const TAG_STYLES: Record<
   feature: {
     label: "Feature",
     className: "bg-violet-100 text-violet-800",
+  },
+  customer: {
+    label: "Customer",
+    className: "bg-blue-100 text-blue-800",
+  },
+  revenue: {
+    label: "Revenue",
+    className: "bg-emerald-100 text-emerald-800",
+  },
+  ask: {
+    label: "Ask",
+    className: "bg-amber-100 text-amber-800",
   },
   bug: {
     label: "Bug",
@@ -178,6 +191,7 @@ export function ChatPanel({
   userId,
   onNewMessage,
   onPineappleEarned,
+  onProjectUpdate,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -248,6 +262,11 @@ export function ChatPanel({
           description: "Pineapples earned for your activity!",
           icon: "🍍",
         });
+      }
+
+      // Update progress score
+      if (data.progressDelta && data.progressDelta > 0 && onProjectUpdate) {
+        onProjectUpdate({ progress_score: Math.min(100, project.progress_score + data.progressDelta) });
       }
     } catch (err) {
       const errorMessage =

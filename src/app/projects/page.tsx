@@ -49,13 +49,10 @@ export default async function ProjectsPage() {
             </Button>
           </Link>
           <Link href="/profile">
-            <Button variant="ghost" size="sm">
-              Profile
-            </Button>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-sm font-medium text-white hover:bg-zinc-700 transition-colors">
+              {(profile?.display_name || user.email)?.[0]?.toUpperCase()}
+            </div>
           </Link>
-          <span className="text-sm text-muted-foreground">
-            {profile?.display_name ?? user.email}
-          </span>
         </div>
       </header>
 

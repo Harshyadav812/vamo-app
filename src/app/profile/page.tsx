@@ -81,7 +81,6 @@ export default function ProfilePage() {
         .update({
           display_name: displayName,
           avatar_url: avatarUrl,
-          updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
 
@@ -139,139 +138,136 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0a0a0a]">
-        <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <div className="mx-auto max-w-2xl px-6 py-12">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Profile Settings</h1>
-            <p className="mt-2 text-gray-400">Manage your account details and preferences.</p>
+    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 font-sans selection:bg-teal-500/30">
+      <div className="mx-auto max-w-xl px-6 py-16 sm:py-24">
+        
+        {/* Header */}
+        <div className="mb-12 flex items-end justify-between border-b border-white/5 pb-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
+            <p className="text-sm text-zinc-400">Manage your persona and security</p>
           </div>
-          <Button variant="destructive" onClick={handleSignOut} className="gap-2">
-            <LogOut className="h-4 w-4" />
+          <Button 
+            variant="ghost" 
+            onClick={handleSignOut} 
+            className="text-zinc-400 hover:text-red-400 hover:bg-red-400/10 -mr-4"
+            size="sm"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
             Sign out
           </Button>
         </div>
 
-        <div className="space-y-6">
-          {/* Profile Picture & Name */}
-          <Card className="border-white/10 bg-[#141414]">
-            <CardHeader>
-              <CardTitle className="text-lg">Public Profile</CardTitle>
-              <CardDescription>This information will be displayed publicly.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center gap-6">
-                <Avatar className="h-20 w-20 border-2 border-white/10">
-                  <AvatarImage src={avatarUrl} />
-                  <AvatarFallback className="bg-teal-900 text-teal-200 text-xl">
-                    {displayName[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className="flex-1 space-y-2">
-                  <Label>Avatar URL</Label>
-                  <Input 
-                    value={avatarUrl} 
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    placeholder="https://example.com/avatar.jpg"
-                    className="border-white/10 bg-black/40"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter a URL for your avatar image.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Display Name</Label>
+        <div className="space-y-12">
+          
+          {/* Identity Section */}
+          <section className="space-y-6">
+            <h2 className="text-sm font-medium text-zinc-500 uppercase tracking-widest">Identity</h2>
+            
+            <div className="flex items-center gap-6">
+              <Avatar className="h-24 w-24 ring-1 ring-white/10 ring-offset-4 ring-offset-[#0a0a0a]">
+                <AvatarImage src={avatarUrl} className="object-cover" />
+                <AvatarFallback className="bg-zinc-800 text-zinc-400 text-2xl font-light">
+                  {displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-1 flex-1">
+                <Label className="text-xs text-zinc-500">Avatar URL</Label>
                 <Input 
-                  value={displayName} 
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="border-white/10 bg-black/40"
+                  value={avatarUrl} 
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="bg-transparent border-t-0 border-x-0 border-b border-white/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-teal-500 transition-colors h-8 placeholder:text-zinc-700"
                 />
               </div>
+            </div>
 
-              <div className="flex justify-end">
-                <Button onClick={updateProfile} disabled={saving} className="bg-teal-600 hover:bg-teal-500 text-white">
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Public Profile
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="space-y-1 pt-2">
+              <Label className="text-xs text-zinc-500">Display Name</Label>
+              <Input 
+                value={displayName} 
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="What should we call you?"
+                className="bg-transparent border-t-0 border-x-0 border-b border-white/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-teal-500 transition-colors h-10 text-lg placeholder:text-zinc-700"
+              />
+            </div>
+            
+            <div className="flex justify-start pt-2">
+              <Button 
+                onClick={updateProfile} 
+                disabled={saving} 
+                className="bg-zinc-100 text-zinc-900 hover:bg-white rounded-full px-6 h-9 text-sm font-medium transition-transform active:scale-95"
+              >
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save Identity
+              </Button>
+            </div>
+          </section>
 
-          {/* Email */}
-          <Card className="border-white/10 bg-[#141414]">
-            <CardHeader>
-              <CardTitle className="text-lg">Email Address</CardTitle>
-              <CardDescription>
-                Changing your email will require verification on the new address.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Email</Label>
+          {/* Account Section */}
+          <section className="space-y-6 pt-6 border-t border-white/5">
+            <h2 className="text-sm font-medium text-zinc-500 uppercase tracking-widest">Account</h2>
+            
+            <div className="space-y-1">
+              <Label className="text-xs text-zinc-500">Email Address</Label>
+              <div className="flex items-end gap-4">
                 <Input 
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)}
-                  className="border-white/10 bg-black/40"
+                  className="bg-transparent border-t-0 border-x-0 border-b border-white/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-teal-500 transition-colors h-10 placeholder:text-zinc-700 flex-1"
                 />
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={updateEmail} disabled={saving || email === user?.email} variant="outline" className="border-white/10 hover:bg-white/5 text-gray-300">
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Update Email
+                <Button 
+                  onClick={updateEmail} 
+                  disabled={saving || email === user?.email} 
+                  variant="outline"
+                  className="rounded-full h-8 px-4 text-s border-white/10 text-zinc-700 hover:text-white hover:bg-white/5"
+                >
+                  Update
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Password */}
-          <Card className="border-white/10 bg-[#141414]">
-            <CardHeader>
-              <CardTitle className="text-lg">Change Password</CardTitle>
-              <CardDescription>
-                Must be at least 8 characters.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Note: Standard Supabase auth doesn't require current password for update if logged in, 
-                  but UI often shows it. We'll include just new password fields to match API capability 
-                  unless we implement a custom verification flow. */}
-              
-              <div className="space-y-2">
-                <Label>New Password</Label>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-zinc-500">New Password</Label>
                 <Input 
                   type="password"
                   value={newPassword} 
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="border-white/10 bg-black/40"
+                  placeholder="••••••••"
+                  className="bg-transparent border-t-0 border-x-0 border-b border-white/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-teal-500 transition-colors h-10 placeholder:text-zinc-800"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Confirm New Password</Label>
-                <Input 
-                  type="password"
-                  value={confirmPassword} 
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="border-white/10 bg-black/40"
-                />
+              <div className="space-y-1">
+                <Label className="text-xs text-zinc-500">Confirm Password</Label>
+                <div className="flex items-end gap-4">
+                  <Input 
+                    type="password"
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="bg-transparent border-t-0 border-x-0 border-b border-white/10 rounded-none px-0 focus-visible:ring-0 focus-visible:border-teal-500 transition-colors h-10 placeholder:text-zinc-800 flex-1"
+                  />
+                  <Button 
+                    onClick={updatePassword} 
+                    disabled={saving || !newPassword} 
+                    variant="outline"
+                    className="rounded-full h-8 px-4 text-s border-white/10 text-zinc-700 hover:text-white hover:bg-white/5"
+                  >
+                    Change
+                  </Button>
+                </div>
               </div>
-              <div className="flex justify-end">
-                <Button onClick={updatePassword} disabled={saving || !newPassword} variant="outline" className="border-white/10 hover:bg-white/5 text-gray-300">
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Update Password
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
+
         </div>
       </div>
     </div>

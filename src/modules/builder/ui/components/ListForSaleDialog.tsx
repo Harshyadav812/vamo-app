@@ -208,24 +208,63 @@ export function ListForSaleDialog({
       case 3: // Visuals
         return (
           <div className="space-y-4">
-             <div className="bg-gray-50 border rounded-lg p-6 flex flex-col items-center justify-center text-center gap-3">
-               {imageUrl ? (
-                 <img src={imageUrl} alt="Preview" className="max-h-40 rounded shadow-sm object-cover" />
-               ) : (
-                 <ImageIcon className="w-12 h-12 text-gray-300" />
-               )}
-               <div className="w-full max-w-sm">
-                 <Label>Screenshot URL</Label>
-                 <Input 
-                   value={imageUrl} 
-                   onChange={(e) => setImageUrl(e.target.value)} 
-                   placeholder="https://..."
-                   className="mt-1.5"
-                 />
-                 <p className="text-xs text-muted-foreground mt-2">
-                   Paste a direct link to an image (e.g. from Vercel, Imgur).
-                 </p>
-               </div>
+             <div className="bg-gray-50 border rounded-lg p-6 flex flex-col items-center justify-center text-center gap-4 relative">
+                {imageUrl ? (
+                  <div className="relative group">
+                    <img src={imageUrl} alt="Preview" className="max-h-48 rounded shadow-sm object-cover" />
+                    <button 
+                      onClick={() => setImageUrl("")}
+                      className="absolute top-2 right-2 bg-black/50 hover:bg-black/80 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 cursor-pointer relative w-full h-32 justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-100 transition-colors">
+                    <ImageIcon className="w-8 h-8 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-600">Click to upload screenshot</span>
+                    <span className="text-xs text-gray-400">Max size: 400KB</span>
+                    <input 
+                      type="file" 
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        // Validate size (400kb)
+                        if (file.size > 400 * 1024) {
+                           toast.error("File excessively large. Please upload an image under 400KB.");
+                           return;
+                        }
+
+                        // Start upload
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `${project.id}-${Date.now()}.${fileExt}`;
+                        const filePath = `${fileName}`;
+
+                        const loadingToast = toast.loading("Uploading image...");
+
+                        try {
+                           const { error: uploadError } = await supabase.storage
+                             .from('project_images')
+                             .upload(filePath, file);
+
+                           if (uploadError) throw uploadError;
+
+                           const { data } = supabase.storage
+                             .from('project_images')
+                             .getPublicUrl(filePath);
+
+                           setImageUrl(data.publicUrl);
+                           toast.success("Image uploaded successfully!", { id: loadingToast });
+                        } catch (err: any) {
+                           toast.error(err.message || "Failed to upload image", { id: loadingToast });
+                        }
+                      }}
+                    />
+                  </div>
+                )}
              </div>
           </div>
         );

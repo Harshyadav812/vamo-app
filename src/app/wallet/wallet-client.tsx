@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface WalletClientProps {
   displayName: string;
@@ -37,8 +39,15 @@ export function WalletClient({
   userId,
 }: WalletClientProps) {
   const [currentBalance, setCurrentBalance] = useState(balance);
-  const [redeemAmount, setRedeemAmount] = useState("");
+  const [redeemAmount, setRedeemAmount] = useState<string>("50");
   const [redeeming, setRedeeming] = useState(false);
+  const [isRedeemOpen, setIsRedeemOpen] = useState(false);
+  const [rewardType, setRewardType] = useState("uber_eats");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 20;
+  const totalPages = Math.ceil(rewards.length / ITEMS_PER_PAGE);
+  const paginatedRewards = rewards.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   async function handleRedeem() {
     const amount = parseInt(redeemAmount, 10);
@@ -66,9 +75,9 @@ export function WalletClient({
 
       const data = await res.json();
       setCurrentBalance(data.newBalance);
-      setRedeemAmount("");
-      toast.success(`Redeemed ${amount} pineapples`, {
-        description: "Your redemption is being processed.",
+      setRedeemAmount("50");
+      setIsRedeemOpen(false);
+      toast.success("Redemption submitted! You'll receive your reward within 48 hours.", {
         icon: "🍍",
       });
     } catch (err) {
@@ -102,11 +111,10 @@ export function WalletClient({
             {currentBalance} <span className="text-lg leading-none">🍍</span>
           </div>
           <Link href="/profile">
-            <Button variant="ghost" size="sm">
-              Profile
-            </Button>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-sm font-medium text-white hover:bg-zinc-700 transition-colors">
+              {displayName?.[0]?.toUpperCase() || "U"}
+            </div>
           </Link>
-          <span className="text-sm text-muted-foreground">{displayName}</span>
         </div>
       </header>
 
@@ -130,20 +138,50 @@ export function WalletClient({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min="50"
-                  placeholder="Amount (min 50)"
-                  value={redeemAmount}
-                  onChange={(e) => setRedeemAmount(e.target.value)}
-                  className="w-40"
-                />
-                <Button
-                  onClick={handleRedeem}
-                  disabled={redeeming || !redeemAmount}
-                >
-                  {redeeming ? "Redeeming..." : "Redeem"}
-                </Button>
+                <Dialog open={isRedeemOpen} onOpenChange={setIsRedeemOpen}>
+                  <DialogTrigger asChild>
+                    <Button disabled={currentBalance < 50}>Redeem</Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Redeem Pineapples</DialogTitle>
+                      <DialogDescription>
+                        Exchange your hard-earned pineapples for rewards. Current balance: {currentBalance} 🍍
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid space-y-2">
+                        <label htmlFor="amount" className="text-sm font-medium">Redemption Amount</label>
+                        <Input
+                          id="amount"
+                          type="number"
+                          min="50"
+                          max={currentBalance}
+                          value={redeemAmount}
+                          onChange={(e) => setRedeemAmount(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">Minimum 50 pineapples</p>
+                      </div>
+                      <div className="grid space-y-2">
+                        <label className="text-sm font-medium">Reward Type</label>
+                        <Select value={rewardType} onValueChange={setRewardType}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a reward" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="uber_eats">Uber Eats Credit</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsRedeemOpen(false)}>Cancel</Button>
+                      <Button onClick={handleRedeem} disabled={redeeming || !redeemAmount || parseInt(redeemAmount, 10) < 50 || parseInt(redeemAmount, 10) > currentBalance}>
+                        {redeeming ? "Processing..." : "Confirm Redemption"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </CardContent>
@@ -168,14 +206,14 @@ export function WalletClient({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rewards.length === 0 ? (
+                    {paginatedRewards.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
                           No rewards yet. Start building to earn <span className="text-lg leading-none">🍍</span>!
                         </TableCell>
                       </TableRow>
                     ) : (
-                      rewards.map((reward) => (
+                      paginatedRewards.map((reward) => (
                         <TableRow key={reward.id}>
                           <TableCell>
                             {EVENT_LABELS[reward.event_type] ?? reward.event_type}
@@ -191,6 +229,29 @@ export function WalletClient({
                     )}
                   </TableBody>
                 </Table>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-end space-x-2 p-4 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -221,15 +282,16 @@ export function WalletClient({
                           </TableCell>
                           <TableCell>
                             <Badge
-                              variant={
+                              className={
                                 r.status === "fulfilled"
-                                  ? "default"
+                                  ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-200"
                                   : r.status === "pending"
-                                    ? "secondary"
-                                    : "destructive"
+                                    ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200"
+                                    : "bg-red-100 text-red-800 hover:bg-red-100 border-red-200"
                               }
+                              variant="outline"
                             >
-                              {r.status}
+                              {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground">

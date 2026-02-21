@@ -84,6 +84,21 @@ export async function POST(request: Request) {
       throw redemptionError;
     }
 
+    // Insert negative amount into reward_ledger to represent spend
+    await supabase.from("reward_ledger").insert({
+      user_id: user.id,
+      event_type: "reward_redeemed", // Using a special string to denote redemption
+      amount: -amount,
+      idempotency_key: `redeem-${redemption.id}`, // Unique to this redemption
+    });
+
+    // Insert activity event
+    await supabase.from("activity_events").insert({
+      user_id: user.id,
+      event_type: "reward_redeemed",
+      metadata: { amount, redemption_id: redemption.id },
+    });
+
     return NextResponse.json({
       redemption,
       newBalance: profile.pineapple_balance - amount,

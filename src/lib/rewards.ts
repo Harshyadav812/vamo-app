@@ -1,15 +1,15 @@
 // Reward amounts by event type
 export const REWARD_AMOUNTS: Record<string, number> = {
-  chat_prompt: 5,
-  url_added: 10,
-  description_added: 5,
-  industry_added: 5,
-  collaborator_added: 10,
-  evidence_added: 50,
-  testimonial_added: 10,
-  profile_updated: 100,
-  vibecoding_activity: 100,
-  listing_created: 20,
+  chat_prompt: 1,
+  chat_feature: 1,
+  chat_customer: 1,
+  chat_revenue: 1,
+  link_linkedin: 5,
+  link_github: 5,
+  link_website: 3,
+  feature_shipped: 3,
+  customer_added: 5,
+  revenue_logged: 10,
 };
 
 // Rate limiting: max rewards per hour

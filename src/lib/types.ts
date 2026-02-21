@@ -27,7 +27,7 @@ export interface Project {
 }
 
 export type MessageRole = "user" | "assistant";
-export type MessageTag = "feature" | "bug" | "improvement" | "milestone" | "general";
+export type MessageTag = "feature" | "bug" | "improvement" | "milestone" | "general" | "customer" | "revenue" | "ask";
 
 export interface Message {
   id: string;
@@ -50,7 +50,12 @@ export type ActivityEventType =
   | "testimonial_added"
   | "listing_created"
   | "offer_received"
-  | "profile_updated";
+  | "profile_updated"
+  | "feature_shipped"
+  | "customer_added"
+  | "revenue_logged"
+  | "reward_earned"
+  | "reward_redeemed";
 
 export interface ActivityEvent {
   id: string;
