@@ -101,6 +101,11 @@ export function WalletClient({
           <div className="flex items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 text-sm font-medium">
             {currentBalance} <span className="text-lg leading-none">🍍</span>
           </div>
+          <Link href="/profile">
+            <Button variant="ghost" size="sm">
+              Profile
+            </Button>
+          </Link>
           <span className="text-sm text-muted-foreground">{displayName}</span>
         </div>
       </header>

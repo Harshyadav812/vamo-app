@@ -94,3 +94,43 @@ Respond with ONLY valid JSON, no markdown formatting.`;
     };
   }
 }
+
+export async function getListingDescription(
+  projectName: string,
+  projectDescription: string | null,
+  metrics: {
+    progress: number;
+    prompts: number;
+    traction: number;
+  },
+  whyBuilt: string | null
+): Promise<string> {
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  const prompt = `You are a professional copywriter for a startup marketplace. Write a compelling, high-converting listing description for the following project.
+  
+  Project Name: ${projectName}
+  Current Description: ${projectDescription || "N/A"}
+  Why Built: ${whyBuilt || "N/A"}
+  
+  Key Metrics:
+  - Development Progress: ${metrics.progress}%
+  - Founder Engagement (Prompts): ${metrics.prompts}
+  - Traction Signals: ${metrics.traction}
+  
+  The description should be 2-3 paragraphs. 
+  - Paragraph 1: Hook the buyer with the value proposition and current status.
+  - Paragraph 2: Highlight the traction and development effort (using the metrics as proof of work).
+  - Paragraph 3: Explain the potential for the buyer (e.g., "Perfect for someone looking to jumpstart a X business").
+  
+  Tone: Professional, exciting, investment-oriented.
+  Format: Plain text, no markdown headers.`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    console.error("AI Generation Error:", error);
+    return projectDescription || "A promising startup project built with Vamo.";
+  }
+}

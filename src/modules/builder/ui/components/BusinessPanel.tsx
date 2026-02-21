@@ -38,14 +38,19 @@ const SCORE_WEIGHTS: Record<string, number> = {
   url: 10,
   why_built: 10,
   screenshot_url: 5,
+  milestone: 15, // Points per milestone
 };
 
-function calculateProgressScore(project: Project): number {
+function calculateProgressScore(project: Project, milestoneCount: number): number {
   let score = 0;
   if (project.description) score += SCORE_WEIGHTS.description;
   if (project.url) score += SCORE_WEIGHTS.url;
   if (project.why_built) score += SCORE_WEIGHTS.why_built;
   if (project.screenshot_url) score += SCORE_WEIGHTS.screenshot_url;
+  
+  // Add score for milestones (capped)
+  score += Math.min(milestoneCount * SCORE_WEIGHTS.milestone, 65);
+
   return Math.min(score, 100);
 }
 
@@ -138,11 +143,16 @@ export function BusinessPanel({
   const supabase = createClient();
 
   const milestoneMessages = useMemo(
-    () => messages.filter((m) => m.tag === "milestone").slice(-5).reverse(),
+    () => messages.filter((m) => m.summary).slice(-5).reverse(),
     [messages]
   );
 
-  const progressScore = calculateProgressScore(project);
+  const totalMilestones = useMemo(
+    () => messages.filter(m => m.tag === 'milestone').length,
+    [messages]
+  );
+
+  const progressScore = calculateProgressScore(project, totalMilestones);
 
   // Sync progress score with DB if there's a mismatch
   useEffect(() => {
@@ -177,7 +187,9 @@ export function BusinessPanel({
 
       // Recalculate and persist progress score
       const updatedProject = { ...project, [field]: value };
-      const newScore = calculateProgressScore(updatedProject);
+      const currentMilestoneCount = messages.filter(m => m.tag === 'milestone').length;
+      const newScore = calculateProgressScore(updatedProject, currentMilestoneCount);
+      
       if (newScore !== project.progress_score) {
         await supabase
           .from("projects")
@@ -250,6 +262,17 @@ export function BusinessPanel({
       setRunningValuation(false);
     }
   }
+
+function ProgressBar({ value }: { value: number }) {
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+      <div
+        className="h-full bg-emerald-500 transition-all duration-500 ease-out"
+        style={{ width: `${value}%` }}
+      />
+    </div>
+  );
+}
 
   return (
     <div className="flex h-full bg-white">
@@ -437,11 +460,15 @@ export function BusinessPanel({
               {milestoneMessages.length > 0 ? (
                 <div className="space-y-2">
                   {milestoneMessages.map((msg) => (
-                    <div key={msg.id} className="flex items-start gap-3 rounded-lg bg-gray-50 p-3">
-                      <Check className="mt-0.5 h-4 w-4 text-emerald-500 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm line-clamp-2">{msg.content}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{timeAgo(msg.created_at)}</p>
+                    <div key={msg.id} className="flex items-center gap-3 rounded-lg bg-gray-50 p-2.5">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                      </div>
+                      <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium truncate">{msg.summary || msg.content}</p>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                          {timeAgo(msg.created_at)}
+                        </span>
                       </div>
                     </div>
                   ))}

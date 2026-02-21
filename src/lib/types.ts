@@ -34,6 +34,7 @@ export interface Message {
   project_id: string;
   role: MessageRole;
   content: string;
+  summary: string | null;
   tag: MessageTag | null;
   pineapples_earned: number;
   created_at: string;
@@ -89,6 +90,9 @@ export interface Listing {
   description: string;
   asking_price: number | null;
   status: "active" | "sold" | "withdrawn";
+  images: string[];
+  metrics: Record<string, any>;
+  allow_offers: boolean;
   created_at: string;
 }
 

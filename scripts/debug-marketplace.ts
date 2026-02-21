@@ -8,7 +8,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 async function main() {
   console.log("Fetching listings...");
   
-  // Try to fetch all listings without filters first
+  // Try to fetch all listings
   const { data: allListings, error: allError } = await supabase
     .from("listings")
     .select("*");
@@ -17,20 +17,14 @@ async function main() {
     console.error("Error fetching all listings:", allError);
   } else {
     console.log("All listings count:", allListings?.length);
-    console.log("All listings:", allListings);
   }
 
-  // Try to fetch active listings with specific columns (like page.tsx)
-  const { data: activeListings, error: activeError } = await supabase
-    .from("listings")
-    .select("id, title, description, asking_price, status, created_at, project_id")
-    .eq("status", "active");
-
-  if (activeError) {
-    console.error("Error fetching active listings:", activeError);
+  // List storage buckets
+  const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+  if (bucketsError) {
+    console.error("Error listing buckets:", bucketsError);
   } else {
-    console.log("Active listings count:", activeListings?.length);
-    console.log("Active listings:", activeListings);
+    console.log("Buckets:", buckets);
   }
 }
 

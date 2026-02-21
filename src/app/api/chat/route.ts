@@ -92,12 +92,63 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join("\n");
 
-    // Get AI response
-    const aiResponse = await getChatResponse(
-      projectContext,
+    // Auto-classify tag if not provided
+    let finalTag = tag;
+    if (!finalTag || finalTag === "general") {
+      const classificationPrompt = `
+        Classify the user's message into one of these tags: "feature", "bug", "improvement", "milestone", "general".
+        - "milestone": Updates about revenue, user counts, launches, or major achievements.
+        - "feature": Implementing new functionality.
+        - "bug": Fixing issues.
+        - "improvement": Enhancing existing features.
+        - "general": General discussion.
+        
+        User Message: "${message}"
+        
+        Return ONLY the tag name.
+      `;
+      try {
+        const result = await getChatResponse("", classificationPrompt, []);
+        const classified = result.trim().toLowerCase();
+        if (["feature", "bug", "improvement", "milestone", "general"].includes(classified)) {
+          finalTag = classified as any;
+        }
+      } catch (e) {
+        console.error("Classification failed", e);
+      }
+    }
+
+    // Get AI response with STRICT formatting rules
+    const systemPrompt = `
+      You are Vamo, an AI co-founder for startups.
+      Context:
+      ${projectContext}
+
+      Rules:
+      1. Reply in PLAIN TEXT only. No markdown (no bold, no italics, no bullet points).
+      2. No hashtags.
+      3. ABSOLUTELY NO EMOJIS.
+      4. Be concise, encouraging, and helpful.
+    `;
+
+    let aiResponse = await getChatResponse(
+      systemPrompt,
       message,
       chatHistory
     );
+
+    // POST-PROCESSING: Forcefully strip Markdown and Emojis
+    // 1. Remove Markdown (*, **, _, ~, `, >)
+    aiResponse = aiResponse.replace(/(\*\*|__|\*|_|~~|`|>|#)/g, "");
+    
+    // 2. Remove Markdown Links [text](url) -> text
+    aiResponse = aiResponse.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    
+    // 3. Remove Emojis (Unicode ranges)
+    aiResponse = aiResponse.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "");
+
+    // 4. Clean up double spaces created by removal
+    aiResponse = aiResponse.replace(/\s+/g, " ").trim();
 
     // Calculate pineapple reward
     const rewardAmount = REWARD_AMOUNTS.chat_prompt ?? 5;
@@ -108,14 +159,33 @@ export async function POST(request: Request) {
       userMsg?.id ?? Date.now().toString()
     );
 
+    // If tag is 'milestone', generate a concise summary
+    let summary: string | null = null;
+    if (finalTag === "milestone") {
+      try {
+        const summaryPrompt = `
+          The user just shared a startup milestone: "${message}".
+          Rewrite this into a concise, professional notification title (max 5 words).
+          Example: "Reached $10k MRR", "Launched Beta", "First 100 Users".
+          Do not use quotes.
+        `;
+        const summaryResponse = await getChatResponse("", summaryPrompt, []);
+        summary = summaryResponse.trim();
+      } catch (e) {
+        console.error("Failed to generate summary", e);
+      }
+    }
+
     // Insert AI response message
+    // ... rest of the code
     const { data: assistantMsg } = await supabase
       .from("messages")
       .insert({
         project_id: projectId,
         role: "assistant",
         content: aiResponse,
-        tag: tag ?? "general",
+        summary: summary, // Persist the summary
+        tag: finalTag ?? "general",
         pineapples_earned: rewardAmount,
       })
       .select()

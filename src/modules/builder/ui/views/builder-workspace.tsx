@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { Project, Profile, Message, ActivityEvent, Offer } from "@/lib/types";
 import { ChatPanel } from "@/modules/builder/ui/components/ChatPanel";
@@ -59,9 +59,14 @@ export function BuilderWorkspace({
     setMessages((prev) => [...prev, message]);
   }
 
-  function handleProjectUpdate(updates: Partial<Project>) {
-    setCurrentProject((prev) => ({ ...prev, ...updates }));
-  }
+  const handleProjectUpdate = useCallback((updates: Partial<Project>) => {
+    setCurrentProject((prev) => {
+      const updated = { ...prev, ...updates };
+      // Force a new object reference even if deep equality is same, to trigger effects
+      return { ...updated };
+    });
+    // Also update the server-side/global cache if needed, but local state drives UI
+  }, []);
 
   // Shared header content
   const logo = (
@@ -220,6 +225,7 @@ export function BuilderWorkspace({
           onOpenChange={setShowListDialog}
           project={currentProject}
           userId={userId}
+          activityEvents={activityEvents}
         />
         <OfferDialog
           open={showOfferDialog}
@@ -270,6 +276,7 @@ export function BuilderWorkspace({
           onOpenChange={setShowListDialog}
           project={currentProject}
           userId={userId}
+          activityEvents={activityEvents}
         />
         <OfferDialog
           open={showOfferDialog}
@@ -322,6 +329,7 @@ export function BuilderWorkspace({
         onOpenChange={setShowListDialog}
         project={currentProject}
         userId={userId}
+        activityEvents={activityEvents}
       />
       <OfferDialog
         open={showOfferDialog}

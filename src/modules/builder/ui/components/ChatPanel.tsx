@@ -101,14 +101,15 @@ function UserMessage({ msg }: { msg: Message }) {
         {msg.content}
       </div>
       <div className="flex items-center gap-1.5">
-        {tag && (
+        {/* Tag on User Message Removed per user request */}
+        {/* {tag && (
           <Badge
             variant="outline"
             className={`h-5 border-0 px-1.5 text-[10px] font-medium ${TAG_STYLES[tag].className}`}
           >
             {TAG_STYLES[tag].label}
           </Badge>
-        )}
+        )} */}
         <span className="text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
           {formatRelativeTime(msg.created_at)}
         </span>
@@ -139,15 +140,30 @@ function AssistantMessage({ msg }: { msg: Message }) {
           {msg.content}
         </div>
 
-        {/* Pineapple reward badge */}
-        {msg.pineapples_earned > 0 && (
-          <Badge
-            variant="secondary"
-            className="mt-1.5 gap-0.5 px-1.5 text-[10px] font-semibold"
-          >
-            <span className="text-sm">🍍</span>
-            <span>+{msg.pineapples_earned}</span>
-          </Badge>
+        {/* Tags & Rewards row */}
+        {(msg.tag || msg.pineapples_earned > 0) && (
+          <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+             {/* Show tag if present (and it's a specific tag, not general) */}
+             {msg.tag && msg.tag !== "general" && TAG_STYLES[msg.tag] && (
+               <Badge
+                 variant="outline"
+                 className={`h-5 border-0 px-2 py-0 text-[10px] font-medium ${TAG_STYLES[msg.tag].className}`}
+               >
+                 {TAG_STYLES[msg.tag].label}
+               </Badge>
+             )}
+            
+            {/* Pineapple reward badge */}
+            {msg.pineapples_earned > 0 && (
+              <Badge
+                variant="secondary"
+                className="gap-1 px-2 py-0 h-5 text-[10px] font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-100"
+              >
+                <span className="text-xs">🍍</span>
+                <span>+{msg.pineapples_earned}</span>
+              </Badge>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -198,6 +214,7 @@ export function ChatPanel({
       role: "user",
       content: userMessage,
       tag,
+      summary: null,
       pineapples_earned: 0,
       created_at: new Date().toISOString(),
     };

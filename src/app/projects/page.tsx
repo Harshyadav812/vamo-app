@@ -48,6 +48,11 @@ export default async function ProjectsPage() {
               Marketplace
             </Button>
           </Link>
+          <Link href="/profile">
+            <Button variant="ghost" size="sm">
+              Profile
+            </Button>
+          </Link>
           <span className="text-sm text-muted-foreground">
             {profile?.display_name ?? user.email}
           </span>
