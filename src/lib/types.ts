@@ -121,6 +121,21 @@ export interface AnalyticsEvent {
   created_at: string;
 }
 
+export interface Collaborator {
+  id: string;
+  project_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "editor" | "viewer";
+  added_by: string | null;
+  created_at: string;
+  // Joined from profiles
+  profile?: {
+    email: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
 // API error shape — consistent across all routes
 export interface ApiError {
   error: {

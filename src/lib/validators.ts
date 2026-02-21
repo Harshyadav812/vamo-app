@@ -60,3 +60,18 @@ export const updateProfileSchema = z.object({
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+// ─── Collaborators ──────────────────────────────────────────────────────────
+export const inviteCollaboratorSchema = z.object({
+  projectId: z.uuid("Invalid project ID"),
+  email: z.string().email("Invalid email address"),
+});
+
+export type InviteCollaboratorInput = z.infer<typeof inviteCollaboratorSchema>;
+
+export const removeCollaboratorSchema = z.object({
+  projectId: z.uuid("Invalid project ID"),
+  userId: z.uuid("Invalid user ID"),
+});
+
+export type RemoveCollaboratorInput = z.infer<typeof removeCollaboratorSchema>;

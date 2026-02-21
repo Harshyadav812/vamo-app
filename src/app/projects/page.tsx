@@ -21,10 +21,13 @@ export default async function ProjectsPage() {
     .eq("id", user.id)
     .single();
 
+  // Fetch projects where user is owner OR user is a collaborator
+  // Since we have an RLS policy that already scopes projects table to 
+  // ONLY projects the user owns OR is a collaborator on, we can just query all!
+  // It's much simpler and safer to rely on RLS than writing complex OR queries.
   const { data: projects } = await supabase
     .from("projects")
     .select("*")
-    .eq("owner_id", user.id)
     .order("updated_at", { ascending: false });
 
   return (

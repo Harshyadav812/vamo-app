@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
-import type { Project, Message, ActivityEvent, Offer } from "@/lib/types";
+import type { Project, Message, ActivityEvent, Offer, Collaborator } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -141,6 +141,12 @@ export function BusinessPanel({
   const [saving, setSaving] = useState(false);
   const [runningValuation, setRunningValuation] = useState(false);
   const [showFullTimeline, setShowFullTimeline] = useState(false);
+  
+  // Collaborators specific state
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [loadingCollaborators, setLoadingCollaborators] = useState(false);
 
   const supabase = createClient();
 
@@ -247,6 +253,71 @@ export function BusinessPanel({
       toast.error(msg);
     } finally {
       setRunningValuation(false);
+    }
+  }
+
+  // --- Collaborators Handlers ---
+  useEffect(() => {
+    if (activeSection === "collaborators") {
+      fetchCollaborators();
+    }
+  }, [activeSection, project.id]);
+
+  async function fetchCollaborators() {
+    setLoadingCollaborators(true);
+    try {
+      const res = await fetch(`/api/collaborators?projectId=${project.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCollaborators(data.collaborators || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingCollaborators(false);
+    }
+  }
+
+  async function handleInviteCollaborator() {
+    if (!inviteEmail.trim() || !inviteEmail.includes("@")) return;
+    setInviting(true);
+    try {
+      const res = await fetch("/api/collaborators", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, email: inviteEmail.trim() }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error?.message || "Failed to invite");
+      }
+      toast.success("Collaborator invited!");
+      setInviteEmail("");
+      fetchCollaborators();
+      onPineappleEarned(10);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  async function handleRemoveCollaborator(userIdToRemove: string) {
+    if (!confirm("Are you sure you want to remove this collaborator?")) return;
+    try {
+      const res = await fetch("/api/collaborators", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, userId: userIdToRemove }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error?.message || "Failed to remove");
+      }
+      toast.success("Collaborator removed");
+      fetchCollaborators();
+    } catch (err: any) {
+      toast.error(err.message);
     }
   }
 
@@ -623,13 +694,95 @@ function ProgressBar({ value }: { value: number }) {
         )}
 
         {activeSection === "collaborators" && (
-          <div className="space-y-4 max-w-2xl">
-            <h2 className="text-xl font-bold">Collaborators</h2>
-            <p className="text-sm text-muted-foreground">Invite collaborators to your project to build together.</p>
-            <div className="rounded-xl border-2 border-dashed p-8 text-center text-sm text-muted-foreground">
-              <Users className="h-6 w-6 text-gray-400 mx-auto mb-2" />
-              <p className="font-medium">Collaborator management coming soon</p>
-              <p className="mt-1 text-emerald-600 text-xs inline-flex items-center gap-0.5">(+10 🍍 per collaborator)</p>
+          <div className="space-y-6 max-w-2xl">
+            <div>
+              <h2 className="text-xl font-bold">Collaborators</h2>
+              <p className="text-sm text-muted-foreground mt-1">Invite team members to build and manage this project together.</p>
+            </div>
+
+            {/* Invite Form */}
+            <div className="rounded-xl border p-4 space-y-3 bg-gray-50/50">
+              <h3 className="text-sm font-medium">Invite by Email</h3>
+              <div className="flex items-center gap-2">
+                <Input 
+                  placeholder="colleague@startup.com" 
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleInviteCollaborator()}
+                  disabled={inviting}
+                  className="max-w-xs"
+                />
+                <Button 
+                  onClick={handleInviteCollaborator} 
+                  disabled={inviting || !inviteEmail.trim() || !inviteEmail.includes("@")}
+                >
+                  {inviting ? "Inviting..." : "Send Invite"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">They must already have a Vamo account to be invited.</p>
+            </div>
+
+            {/* Collaborators List */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Current Team</h3>
+              {loadingCollaborators ? (
+                <div className="animate-pulse flex space-x-4 p-4 border rounded-xl">
+                  <div className="rounded-full bg-slate-200 h-10 w-10"></div>
+                  <div className="flex-1 space-y-2 py-1">
+                    <div className="h-2 bg-slate-200 rounded w-1/4"></div>
+                    <div className="h-2 bg-slate-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ) : collaborators.length > 0 ? (
+                <div className="rounded-xl border divide-y overflow-hidden">
+                  {collaborators.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between p-4 bg-white">
+                      <div className="flex items-center gap-3 w-full min-w-0">
+                        <div className="h-10 w-10 shrink-0 bg-gray-100 rounded-full flex items-center justify-center text-sm font-bold text-gray-500 overflow-hidden border border-gray-200">
+                          {c.profile?.avatar_url ? (
+                            <img src={c.profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            (c.profile?.display_name || c.profile?.email || "?").charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 pr-4">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {c.profile?.display_name || "Unknown User"} 
+                            {c.user_id === project.owner_id && <span className="ml-2 text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Owner</span>}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">{c.profile?.email}</p>
+                        </div>
+                        {c.user_id !== project.owner_id && c.user_id !== userId && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-600 hover:bg-red-50 hover:text-red-700 shrink-0"
+                            onClick={() => handleRemoveCollaborator(c.user_id)}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                        {c.user_id === userId && c.user_id !== project.owner_id && (
+                           <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-600 hover:bg-red-50 hover:text-red-700 shrink-0"
+                            onClick={() => handleRemoveCollaborator(c.user_id)}
+                          >
+                            Leave
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border-2 border-dashed p-8 text-center text-sm text-muted-foreground">
+                  <Users className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+                  <p className="font-medium">No collaborators yet</p>
+                  <p className="mt-1">It is lonely building alone! Invite someone to join you.</p>
+                </div>
+              )}
             </div>
           </div>
         )}

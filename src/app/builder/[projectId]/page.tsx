@@ -20,11 +20,12 @@ export default async function BuilderPage({ params }: BuilderPageProps) {
   if (!user) redirect("/login");
 
   // Fetch project
+  // We don't filter by owner_id here because collaborators should also have access.
+  // The PostgreSQL row-level security policy enforces who can view the project.
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("*")
     .eq("id", projectId)
-    .eq("owner_id", user.id)
     .single();
 
   if (projectError || !project) {
