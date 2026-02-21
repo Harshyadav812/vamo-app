@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-black text-white hover:bg-black/90 shadow-sm",
-        destructive: "bg-red-500 text-destructive-foreground hover:bg-red-500/90 shadow-sm",
+        destructive: "bg-red-500 text-white hover:bg-red-600/90 shadow-sm",
         outline:
           "border border-black/10 bg-white hover:bg-gray-50 hover:text-black shadow-sm",
         secondary:
@@ -53,7 +53,7 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, className }), "cursor-pointer")}
       {...props}
     />
   )

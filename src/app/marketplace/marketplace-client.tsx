@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { LineChart, MessageSquare, Zap, AlertTriangle, ExternalLink } from "lucide-react";
@@ -21,6 +24,8 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
   const [listings, setListings] = useState(initialListings);
   const [selectedListing, setSelectedListing] = useState<(Listing & { project: Project }) | null>(null);
   const [isDelisting, setIsDelisting] = useState(false);
+  const [isReasonDialogOpen, setIsReasonDialogOpen] = useState(false);
+  const [delistReason, setDelistReason] = useState("");
 
   const isOutdated = (snapshotDate: string) => {
     if (!snapshotDate) return false;
@@ -30,15 +35,28 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
 
   const isOwnerOrAdmin = selectedListing && (isAdmin || (user && selectedListing.owner_id === user.id));
 
-  async function handleDelist() {
+  function initiateDelist() {
     if (!selectedListing) return;
+    
+    if (isAdmin && user && selectedListing.owner_id !== user.id) {
+      setDelistReason("");
+      setIsReasonDialogOpen(true);
+    } else {
+      executeDelist("");
+    }
+  }
+
+  async function executeDelist(reason: string) {
+    if (!selectedListing) return;
+    
+    setIsReasonDialogOpen(false);
     setIsDelisting(true);
 
     try {
       const res = await fetch("/api/marketplace/delist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId: selectedListing.id }),
+        body: JSON.stringify({ listingId: selectedListing.id, reason }),
       });
 
       if (!res.ok) {
@@ -239,7 +257,7 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
                    <Button
                      variant="destructive"
                      className="w-full text-sm py-4 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-100 shadow-none"
-                     onClick={handleDelist}
+                     onClick={initiateDelist}
                      disabled={isDelisting}
                    >
                      {isDelisting ? "Removing..." : "Remove Listing"}
@@ -250,6 +268,36 @@ export function MarketplaceClient({ listings: initialListings, user, isAdmin }: 
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Admin Delist Reason Dialog */}
+      <Dialog open={isReasonDialogOpen} onOpenChange={setIsReasonDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Remove Listing</DialogTitle>
+            <DialogDescription>
+              Provide an optional reason for removing this project from the marketplace. The owner will be notified via their project chat.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid space-y-2">
+              <Label htmlFor="reason">Reason for removal</Label>
+              <Textarea
+                id="reason"
+                placeholder="e.g., Inappropriate content, violating terms..."
+                value={delistReason}
+                onChange={(e) => setDelistReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReasonDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => executeDelist(delistReason)} disabled={isDelisting}>
+              {isDelisting ? "Removing..." : "Remove from Marketplace"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
