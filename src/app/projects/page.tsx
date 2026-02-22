@@ -41,6 +41,16 @@ export default async function ProjectsPage() {
     .or(orCondition)
     .order("updated_at", { ascending: false });
 
+  // Fetch all listings for these projects in one go to check status
+  const projectIds = projects?.map(p => p.id) || [];
+  const { data: listings } = projectIds.length > 0 
+    ? await supabase.from("listings").select("project_id, status, asking_price").in("project_id", projectIds)
+    : { data: [] };
+
+  const listingMap = new Map(
+    (listings || []).map(l => [l.project_id, l])
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -97,33 +107,53 @@ export default async function ProjectsPage() {
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {(projects as Project[]).map((project) => (
-              <Link key={project.id} href={`/builder/${project.id}`}>
-                <Card className="transition-shadow hover:shadow-md cursor-pointer">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {project.name}
-                      {project.owner_id !== user.id && (
-                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold tracking-wider uppercase">
-                          Collaborator
+            {(projects as Project[]).map((project) => {
+              const listing = listingMap.get(project.id);
+              const isListed = listing && listing.status === "active";
+              
+              return (
+                <Link key={project.id} href={`/builder/${project.id}`} className="block h-full">
+                  <Card className="transition-shadow hover:shadow-md cursor-pointer flex flex-col h-full">
+                    <CardHeader className="flex-1">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        {project.name}
+                        {project.owner_id !== user.id && (
+                          <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold tracking-wider uppercase">
+                            Collaborator
+                          </span>
+                        )}
+                      </CardTitle>
+                      
+                      <CardDescription className="line-clamp-3">
+                        {project.description || "No description"}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mt-4">
+                        <span className="bg-zinc-100 text-zinc-700 px-2.5 py-1 rounded-full border border-black/5">
+                          Progress: {project.progress_score}%
                         </span>
-                      )}
-                    </CardTitle>
-                    <CardDescription>
-                      {project.description || "No description"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>Progress: {project.progress_score}%</span>
-                      <span>
-                        {new Date(project.updated_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                        
+                        {isListed ? (
+                          <>
+                             <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-200/50 font-semibold">
+                               ${((listing.asking_price || 0) / 100).toLocaleString()}
+                             </span>
+                             <span className="bg-zinc-100 text-zinc-700 px-2.5 py-1 rounded-full border border-black/5">
+                               Listed
+                             </span>
+                          </>
+                        ) : (
+                           <span className="bg-zinc-100 text-zinc-700 px-2.5 py-1 rounded-full border border-black/5">
+                             Active
+                           </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         )}
       </main>

@@ -67,14 +67,6 @@ const TAG_STYLES: Record<
   },
 };
 
-// ── Suggestion chips shown at the top when no messages yet ────────────────────
-
-const SUGGESTION_CHIPS = [
-  { label: "Add my Profile", reward: 100, icon: User },
-  { label: "Log Vibecoding Activity", reward: 100, icon: Zap },
-  { label: "Add Collaborators", reward: 100, icon: Users },
-];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatRelativeTime(dateStr: string): string {
@@ -346,11 +338,6 @@ export function ChatPanel({
     }
   }
 
-  function handleSuggestionClick(label: string) {
-    setInput(`I want to ${label.toLowerCase()}`);
-    textareaRef.current?.focus();
-  }
-
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-white">
       {/* Project name badge (Editable) */}
@@ -377,31 +364,12 @@ export function ChatPanel({
         )}
       </div>
 
-      {/* Suggestion chips when no messages */}
+      {/* Welcome message when no messages */}
       {messages.length === 0 && (
         <div className="space-y-3 p-4">
           <p className="text-[13px] leading-relaxed text-gray-600 flex flex-wrap items-center gap-1">
-            Welcome! Go to{" "}
-            <span className="font-medium text-black underline">
-              Business Analysis
-            </span>{" "}
-            to earn pineapples, or start chatting below. <span className="text-lg leading-none">🍍</span>
+            Welcome! Share your progress in the chat to earn pineapples. <span className="text-lg leading-none">🍍</span>
           </p>
-          <div className="flex flex-wrap gap-2">
-            {SUGGESTION_CHIPS.map((chip) => (
-              <button
-                key={chip.label}
-                onClick={() => handleSuggestionClick(chip.label)}
-                className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-all hover:border-gray-300 hover:shadow-sm"
-              >
-                <chip.icon className="h-3.5 w-3.5 text-gray-500" />
-                <span>{chip.label}</span>
-                <span className="text-emerald-600 flex items-center gap-0.5">
-                  +{chip.reward}<span className="text-xs">🍍</span>
-                </span>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
