@@ -75,18 +75,39 @@ export function ListForSaleDialog({
         snapshot_date: new Date().toISOString(),
       });
       setStep(1); // Reset to start
-      setDescription(project.description || "");
+      const loadExistingListing = async () => {
+        if (project.listed) {
+          const { data: listing } = await supabase
+            .from("listings")
+            .select("*")
+            .eq("project_id", project.id)
+            .eq("status", "active")
+            .single();
 
-      // Pre-fill asking price with high-end valuation from previous Vamo offers
-      const offerEvents = activityEvents.filter((e) => e.event_type === "offer_received");
-      if (offerEvents.length > 0) {
-        const latestOffer = offerEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-        if (latestOffer && latestOffer.metadata.offer_high) {
-          setAskingPrice(String(latestOffer.metadata.offer_high));
+          if (listing) {
+            setDescription(listing.description);
+            setAskingPrice(String((listing.asking_price || 0) / 100));
+            setImageUrl(listing.images?.[0] || project.screenshot_url || "");
+            return;
+          }
         }
-      }
+
+        setDescription(project.description || "");
+        setImageUrl(project.screenshot_url || "");
+        
+        // Pre-fill asking price with high-end valuation from previous Vamo offers
+        const offerEvents = activityEvents.filter((e) => e.event_type === "offer_received");
+        if (offerEvents.length > 0) {
+          const latestOffer = offerEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          if (latestOffer && latestOffer.metadata.offer_high) {
+            setAskingPrice(String(latestOffer.metadata.offer_high));
+          }
+        }
+      };
+
+      loadExistingListing();
     }
-  }, [open, project, activityEvents]);
+  }, [open, project, activityEvents, supabase]);
 
   async function handleGenerateDescription() {
     setAiGenerating(true);
@@ -120,38 +141,61 @@ export function ListForSaleDialog({
   async function handleSubmit() {
     setLoading(true);
     try {
-      const { data: listing, error } = await supabase.from("listings").insert({
+      // Safely parse price, removing commas
+      const cleanPrice = String(askingPrice).replace(/,/g, "");
+      const finalCents = Math.round(parseFloat(cleanPrice) * 100) || 0;
+
+      const payload = {
         project_id: project.id,
         owner_id: userId,
         title: project.name,
         description: description,
-        asking_price: parseInt(askingPrice, 10) * 100, // cents
+        asking_price: finalCents,
         status: "active",
         images: imageUrl ? [imageUrl] : [],
         metrics: metrics,
         allow_offers: true,
-      }).select().single();
+      };
 
-      if (error) throw error;
+      let listing;
+      if (project.listed) {
+        const { data, error } = await supabase
+          .from("listings")
+          .update(payload)
+          .eq("project_id", project.id)
+          .eq("status", "active")
+          .select()
+          .single();
+        if (error) throw error;
+        listing = data;
+      } else {
+        const { data, error } = await supabase
+          .from("listings")
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        listing = data;
 
-      await supabase
-        .from("projects")
-        .update({ listed: true })
-        .eq("id", project.id);
+        await supabase
+          .from("projects")
+          .update({ listed: true })
+          .eq("id", project.id);
+      }
 
       // Log activity event
       await supabase.from("activity_events").insert({
         project_id: project.id,
         user_id: userId,
-        event_type: "listing_created",
-        metadata: { asking_price: parseInt(askingPrice, 10) * 100 },
+        event_type: project.listed ? "listing_updated" : "listing_created",
+        metadata: { asking_price: finalCents },
       });
 
       // Log analytics
       trackEvent("listing_created", { projectId: project.id, listingId: listing?.id || null });
 
-      toast.success("Project listed successfully!", {
-        description: "Your project is now live on the marketplace.",
+      toast.success(project.listed ? "Listing updated successfully!" : "Project listed successfully!", {
+        description: project.listed ? "Your new asking price and details are live." : "Your project is now live on the marketplace.",
       });
       onOpenChange(false);
     } catch (err) {

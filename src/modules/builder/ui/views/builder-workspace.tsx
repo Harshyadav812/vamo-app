@@ -146,7 +146,7 @@ export function BuilderWorkspace({
           className="rounded-full bg-green-600 px-4 text-white hover:bg-green-700"
           onClick={() => setShowListDialog(true)}
         >
-          List for Sale
+          {currentProject.listed ? "Update Listing" : "List for Sale"}
         </Button>
       )}
     </div>

@@ -61,8 +61,7 @@ export default async function BuilderPage({ params }: BuilderPageProps) {
     .from("activity_events")
     .select("*")
     .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .limit(20);
+    .order("created_at", { ascending: false });
 
   return (
     <BuilderWorkspace
