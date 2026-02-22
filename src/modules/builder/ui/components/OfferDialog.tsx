@@ -65,14 +65,14 @@ export function OfferDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Get Vamo Offer</DialogTitle>
-          <DialogDescription>
-            AI-powered valuation for &quot;{project.name}&quot;
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col p-0! gap-0">
+        <div className="overflow-y-auto p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle>Get Vamo Offer</DialogTitle>
+            <DialogDescription>
+              AI-powered valuation for &quot;{project.name}&quot;
+            </DialogDescription>
+          </DialogHeader>
           {!offer ? (
             <>
               <div className="rounded-lg border bg-gray-50 p-4 text-sm text-muted-foreground">

@@ -72,7 +72,19 @@ export async function POST(request: Request) {
         tractionSignalCount,
         totalEvents: activityEvents.length
       },
-      recentEvents: activityEvents.slice(0, 5) // Send a small subset to give context to the AI
+      recentEvents: activityEvents.slice(0, 20).map(e => {
+        // Format asking price out of cents if it exists
+        if (e.metadata && typeof e.metadata.asking_price === "number") {
+          return {
+            ...e,
+            metadata: {
+              ...e.metadata,
+              asking_price: e.metadata.asking_price / 100
+            }
+          };
+        }
+        return e;
+      })
     });
 
     // Use AI to generate valuation

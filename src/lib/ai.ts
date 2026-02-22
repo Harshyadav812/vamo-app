@@ -146,6 +146,9 @@ ${activitySummary}
 Guidelines:
 - If there is insufficient data or traction, explicitly say so in your reasoning and provide a very low baseline valuation like $0 - $1000.
 - Valuation must be based on logged signals only. Do not hallucinate metrics.
+- Pay close attention to Monthly Recurring Revenue (MRR), Monthly Active Users (MAU), and other strong traction signals.
+- If the project has strong MRR or user count, provide an optimistic, realistic startup valuation that scales appropriately with the traction (e.g. 5-10x MRR or matching deep user engagement).
+- In the "signals" array, be sure to format any monetary amounts correctly with a dollar sign.
 
 Expected response must be valid JSON matching this schema exactly:
 {
