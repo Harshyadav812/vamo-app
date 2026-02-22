@@ -15,7 +15,7 @@ export default async function MarketplacePage() {
 
   let profile = null;
   if (user) {
-    const { data } = await supabase.from("profiles").select("display_name, is_admin").eq("id", user.id).single();
+    const { data } = await supabase.from("profiles").select("display_name, is_admin, avatar_url").eq("id", user.id).single();
     profile = data;
   }
 
@@ -90,8 +90,12 @@ export default async function MarketplacePage() {
                 </Button>
               </Link>
               <Link href="/profile">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-sm font-medium text-white hover:bg-zinc-700 transition-colors">
-                  {(profile?.display_name || user.email)?.[0]?.toUpperCase()}
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-sm font-medium text-white hover:bg-zinc-700 transition-colors overflow-hidden border border-zinc-200">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    (profile?.display_name || user.email)?.[0]?.toUpperCase()
+                  )}
                 </div>
               </Link>
             </>
