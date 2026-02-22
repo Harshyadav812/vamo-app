@@ -65,7 +65,7 @@ export default function HomePage() {
             <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
               <Link href="/signup">
                 <Button className="rounded-full bg-black text-white hover:bg-zinc-800 hover:scale-105 transition-all text-base px-8 h-12 shadow-xl shadow-black/10">
-                  Start building now <Sparkles className="ml-2 w-4 h-4" />
+                  Start building now
                 </Button>
               </Link>
               <Link href="/marketplace">
